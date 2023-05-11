@@ -117,39 +117,38 @@ The project is configured to run from a Docker image in Visual Studio Code (VS C
 
 1. Clone the repo
    ```sh
-   git@github.com:fraunhoferhhi/X-maps.git
+   git clone git@github.com:fraunhoferhhi/X-maps.git
    ```
 2. Open X-maps folder in VS Code
 3. Copy `.devcontainer/metavision.list.template` to `.devcontainer/metavision.list`
 4. Edit `.devcontainer/metavision.list` to fill in the URL to the Ubuntu 20.04 Metavision SDK
-4. "Reopen in Container" in VS Code
+4. *Reopen in Container* in VS Code
 
 <!-- <p align="right">(<a href="#readme-top">back to top</a>)</p> -->
 
 ### Download test data
 
-To use data from [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/esl.html) locally
+To use data from the [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/esl.html) dataset locally:
 
-1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`
-2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data`
-3. "Rebuild container" to reopen the project with the mounted folder
-4. Terminal &rarr; Run Task... &rarr; "Download ESL (static) raw and bias files"
+1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`.
+2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data`.
+3. "Rebuild container" to reopen the project with the mounted folder.
+4. Terminal &rarr; Run Task... &rarr; *Download ESL (static) raw and bias files*.
 
 ### ESL static depth reprojection
 
-Run the target "X-maps ESL static seq1". A window should open that performs a live depth estimation of the book_duck sequence, projected into the projector's view.
+Run the target *X-maps ESL static seq1*. A window should open that performs a live depth estimation of the `book_duck` sequence, projected into the projector's view.
 
 ### Live depth reprojection (Spatial Augmented Reality example)
 
-1. Ensure that the camera is working correctly by running `metavision_player` in a Terminal in VS Code
+1. Ensure that the camera is working correctly by running `metavision_player` in a Terminal in VS Code.
 2. Calibrate your camera-projector setup, and write the parameters into a YAML file, storing the OpenCV matrices. Examples can be found in `data/`.
-3. Edit the parameters for target "X-maps live depth reprojection" in `.vscode/launch.json`.
+3. Edit the command line arguments for target *X-maps live depth reprojection* in `.vscode/launch.json`.
 4. Display bright content on the projector to allow the start and end of the frame to be identified (trigger finding).
-5. Running "X-maps live depth reprojection" creates a window that shows the scene depth from the projector's view.
-6. Move the depth reprojection window to the projector to overlay the scene with the measured depth 
+5. Running *X-maps live depth reprojection* creates a window that shows the scene depth from the projector's view.
+6. Move the depth reprojection window to the projector to overlay the scene with the measured depth.
 
-To display the depth in full screen on the projector, use the OS to maximize the window. On Ubuntu, a keyboard shortcut can be set under Settings &rarr; Keyboard &rarr; View and Customize Shortcuts &rarr; Windows &rarr; Toggle fullscreen mode.
-
+To display the depth in full screen on the projector, use the OS window manager to maximize the window. On Ubuntu, a keyboard shortcut can be set under Settings &rarr; Keyboard &rarr; View and Customize Shortcuts &rarr; Windows &rarr; Toggle fullscreen mode.
 
 The parameters you can use when running the `depth_reprojection.py` script can be listed by running `python3 python/depth_reprojection.py --help` in a Terminal in the Docker image in VS Code.
 
@@ -164,8 +163,6 @@ The parameters you can use when running the `depth_reprojection.py` script can b
 | `--calib`  | Specifies the path to a yaml file with camera and projector intrinsic and extrinsic calibration. This parameter is required. |
 | `--bias`  | Specifies the path to the bias file. This is only required for live camera usage. |
 | `--input`  | Specifies the path to either a .raw, .dat file for prerecorded sessions. Leave this parameter out for live capture. |
-
-To use a parameter, simply include it in your command with its associated value, like so: `python depth_reprojection.py --projector-width 800`.
 
  
 <!-- USAGE EXAMPLES -->
