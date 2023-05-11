@@ -11,11 +11,13 @@
             "program": "python/depth_reprojection.py",
             "args": [
                 "--bias",
-                "/workspaces/X-maps/data/live_cam_calibration/live_cam.bias",
+                "/workspaces/X-maps/data/nebra_evk3.0/live_cam.bias",
                 "--calib",
-                "/workspaces/X-maps/data/live_cam_calibration/EB3D_calibration_new.yaml",
-                "--projector-time-map",
-                "/workspaces/X-maps/data/live_cam_calibration/proj_time_map.npy"
+                "/workspaces/X-maps/data/nebra_evk3.0/X-maps_calibration_8_5mm.yaml",
+                "--z-near",
+                "0.2",
+                "--z-far",
+                "1.0",
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

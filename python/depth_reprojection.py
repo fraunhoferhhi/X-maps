@@ -47,8 +47,6 @@ def generate_frame(evs, frame):
 )
 @click.option("--z-near", default=0.1, help="Minimum depth [m] for visualization", type=float)
 @click.option("--z-far", default=1.0, help="Maximum depth [m] for visualization", type=float)
-@click.option("--projector-height", default=1280, help="Projector height in pixels", type=int)
-
 @click.option(
     "--calib",
     help="path to yaml file with camera and projector intrinsic and extrinsic calibration",
