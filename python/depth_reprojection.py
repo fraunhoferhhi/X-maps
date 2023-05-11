@@ -133,7 +133,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
             # Catching up on the events on a live stream will be tricky
             # TODO implement a proper way to reset the event stream
             # TODO perf get rid of EventsIterator, use MetaEventBufferProducer directly
-            mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"])
+            mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
             cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
             last_frame_produced_time = -1
@@ -154,20 +154,22 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
                     time_since_last_finished_frame_ms = (time.perf_counter() - last_frame_produced_time) * 1000
 
-                    if last_frame_produced_time != -1 and time_since_last_finished_frame_ms > 10:
+                    if last_frame_produced_time != -1 and time_since_last_finished_frame_ms > 13:
                         print("")
                         print(f"time since last frame: {time_since_last_finished_frame_ms}, resetting!")
                         trigger_finder.reset_buffer()
                         last_frame_produced_time = -1
-                        return
+                        return True
 
                     trigger_finder.process_events(act_events_buf)
 
                     if window.should_close():
                         sys.exit(0)
+        
+            return False
 
-        while True:
-            main_loop()
+        while main_loop():
+            pass
 
 
 if __name__ == "__main__":
