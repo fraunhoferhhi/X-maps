@@ -37,23 +37,28 @@ def generate_frame(evs, frame):
 
 
 @click.command()
-@click.option("--projector_width", default=720, help="Projector width in pixels", type=int)
-@click.option("--projector_height", default=1280, help="Projector height in pixels", type=int)
-@click.option("--projector_fps", default=60, help="Projector fps", type=int)
+@click.option("--projector-width", default=720, help="Projector width in pixels", type=int)
+@click.option("--projector-height", default=1280, help="Projector height in pixels", type=int)
+@click.option("--projector-fps", default=60, help="Projector fps", type=int)
 @click.option(
-    "--proj_time_map",
+    "--projector-time-map",
     help="Path to calibrated projector time map file (*.npy). If left empty, a linear time map will be used.",
     type=click.Path(),
 )
+@click.option("--z-near", default=0.1, help="Minimum depth [m] for visualization", type=float)
+@click.option("--z-far", default=1.0, help="Maximum depth [m] for visualization", type=float)
+@click.option("--projector-height", default=1280, help="Projector height in pixels", type=int)
+
 @click.option(
     "--calib",
     help="path to yaml file with camera and projector intrinsic and extrinsic calibration",
     type=click.Path(),
     required=True,
 )
-@click.option("--bias", help="path to bias file, only necessary with live camera", type=click.Path())
-@click.option("--input", help="either raw, dat or empty for live camera", type=click.Path())
-def main(projector_width, projector_height, projector_fps, proj_time_map, calib, bias, input):
+@click.option("--bias", help="Path to bias file, only required for live camera", type=click.Path())
+@click.option("--input", help="Either a .raw, .dat file for prerecordings. Don't specify for live capture.", type=click.Path())
+# def main(projector_width, projector_height, projector_fps, projector_time_map, znear, zfar, calib, bias, input):
+def main(projector_width, projector_height, projector_fps, **cli_params):
     print("Code sample showing how to create a simple application testing different noise filtering strategies.")
     print(
         "Available keyboard options:\n"
@@ -64,32 +69,33 @@ def main(projector_width, projector_height, projector_fps, proj_time_map, calib,
         "  - Q/Escape: Quit the application\n"
     )
 
-    cam_width = 640
-    cam_height = 480
+    # TODO remove these static values, retrieve from event stream
+    camera_width = 640
+    camera_height = 480
 
     pos_filter = PolarityFilterAlgorithm(1)
-    act_filter = ActivityNoiseFilterAlgorithm(cam_width, cam_height, activity_time_ths)
+    act_filter = ActivityNoiseFilterAlgorithm(camera_width, camera_height, activity_time_ths)
 
     pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
     act_events_buf = ActivityNoiseFilterAlgorithm.get_empty_output_buffer()
 
-    frame = np.zeros((cam_height, cam_width, 3), dtype=np.uint8)
+    frame = np.zeros((camera_height, camera_width, 3), dtype=np.uint8)
 
     last_frame_produced_time = -1
 
     stats_printer = StatsPrinter()
 
     with SingleTimer("Setting up calibration"):
-        calib_obj = CamProjCalibration(calib, cam_width, cam_height, projector_width, projector_height)
+        calib_obj = CamProjCalibration(cli_params["calib"], camera_width, camera_height, projector_width, projector_height)
 
     with SingleTimer("Setting up projector time map"):
-        proj_time_map = ProjectorTimeMap(calib_obj, proj_time_map)
+        proj_time_map = ProjectorTimeMap(calib_obj, cli_params["projector_time_map"])
 
     with SingleTimer("Setting up projector X-map"):
         x_maps_disp = XMapsDisparity(calib_obj, proj_time_map, projector_width)
 
     with SingleTimer("Setting up disparity to depth"):
-        disp_to_depth = DisparityToDepth(calib_obj)
+        disp_to_depth = DisparityToDepth(calib_obj, cli_params["z_near"], cli_params["z_far"])
 
     # Window - Graphical User Interface (Display filtered events and process keyboard events)
     with MTWindow(
@@ -129,13 +135,13 @@ def main(projector_width, projector_height, projector_fps, proj_time_map, calib,
             # Catching up on the events on a live stream will be tricky
             # TODO implement a proper way to reset the event stream
             # TODO perf get rid of EventsIterator, use MetaEventBufferProducer directly
-            mv_iterator = BiasEventsIterator(input_filename=input, delta_t=4000, bias_file=bias)
+            mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"])
             cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
             last_frame_produced_time = -1
 
-            assert cam_height_reader == cam_height
-            assert cam_width_reader == cam_width
+            assert cam_height_reader == camera_height
+            assert cam_width_reader == camera_width
 
             # Process events
             for evs in mv_iterator:

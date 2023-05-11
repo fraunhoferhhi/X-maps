@@ -142,7 +142,7 @@ To use data from [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/esl.
 
 ### ESL static depth reprojection
 
-
+Run the target "X-maps ESL static seq1". A window should open that performs a live depth estimation of the book_duck sequence, projected into the projector's view.
 
 ### Live depth reprojection
 

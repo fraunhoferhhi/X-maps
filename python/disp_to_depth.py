@@ -64,8 +64,10 @@ def disparity_to_depth_rectified(disparity, P1):
 
 
 class DisparityToDepth:
-    def __init__(self, calib):
+    def __init__(self, calib, z_near, z_far):
         self.calib = calib
+        self.z_near = z_near
+        self.z_far = z_far
 
         self.dilate_kernel = np.ones((7, 7), dtype=np.uint8)
 
@@ -91,11 +93,8 @@ class DisparityToDepth:
             self.calib.P2,
         )
 
-        EXPECTED_MIN = 0.4
-        EXPECTED_MAX = 1.0
-
         # TODO perf Numba impl?
-        depth_map_u8 = clip_normalize_uint8_depth_frame(depth_map_f32, min_value=EXPECTED_MIN, max_value=EXPECTED_MAX)
+        depth_map_u8 = clip_normalize_uint8_depth_frame(depth_map_f32, min_value=self.z_near, max_value=self.z_far)
 
         frame = generate_color_map(depth_map_u8)
 
