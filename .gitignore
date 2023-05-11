@@ -1,0 +1,29 @@
+# CVG_EB3D_python/.gitignore version 3.23.1-1
+/bin/
+/bin-shared/
+/build/
+CMakeUserPresets.json
+core
+/deploy/
+/doc/
+/download/
+/ext/
+/install/
+/lib/
+/lib-shared/
+# CMake build tree created by vs2019
+/out/
+*.creator.user
+*.pyc
+__pycache__/
+*.sdf
+*.suo
+.vs/
+# vscode users may want to add some files inside /.vscode/
+/.vscode/*.*
+!/.vscode/c_cpp_properties.json
+!/.vscode/cmake-variants.yaml
+!/.vscode/launch.json
+# custom
+/data/
+/.devcontainer/metavision.list

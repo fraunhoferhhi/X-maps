@@ -114,42 +114,45 @@ This section should list any major frameworks/libraries used to bootstrap your p
 
  -->
 
-<!-- GETTING STARTED -->
-<!-- ## Getting Started
+## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+The project is configured to run from a Docker image in Visual Studio Code (VS Code). It was tested on an Ubuntu 22.04 host.
 
 ### Installation
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+1. Clone the repo
    ```sh
-   git clone https://github.com/your_username_/Project-Name.git
+   git@github.com:fraunhoferhhi/X-maps.git
    ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
+2. Open X-maps folder in VS Code
+3. Copy `.devcontainer/metavision.list.template` to `.devcontainer/metavision.list`
+4. Edit `.devcontainer/metavision.list` to fill in the URL to the Ubuntu 20.04 Metavision SDK
+4. "Reopen in Container" in VS Code
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<!-- <p align="right">(<a href="#readme-top">back to top</a>)</p> -->
+
+### Download test data
+
+To use data from [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/esl.html) locally
+
+1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`
+2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data`
+3. "Rebuild container" to reopen the project with the mounted folder
+4. Terminal &rarr; Run Task... &rarr; "Download ESL (static) raw and bias files"
+
+### ESL static depth reprojection
 
 
- -->
+
+### Live depth reprojection
+
+Edit the target "X-maps live depth reprojection" in `.vscode/launch.json`.
+
+Arguments:
+`--bias`: 
+
+
+ 
 <!-- USAGE EXAMPLES -->
 <!-- ## Usage
 

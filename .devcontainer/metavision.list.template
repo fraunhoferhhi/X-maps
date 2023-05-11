@@ -1,0 +1,4 @@
+# Sign up with Prophesee for Metavision SDK package source list: https://www.prophesee.ai/metavision-intelligence-sdk-download/
+# Then add a single line here, replacing SUPERSECRET from the following template:
+
+# deb [arch=amd64 trusted=yes] https://apt.prophesee.ai/dists/public/SUPERSECRET/ubuntu focal sdk

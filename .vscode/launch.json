@@ -1,0 +1,44 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "X-maps live depth reprojection",
+            "type": "python",
+            "request": "launch",
+            "program": "python/depth_reprojection.py",
+            "args": [
+                "--bias",
+                "/workspaces/X-maps/data/live_cam_calibration/live_cam.bias",
+                "--calib",
+                "/workspaces/X-maps/data/live_cam_calibration/EB3D_calibration_new.yaml",
+                "--proj_time_map",
+                "/workspaces/X-maps/data/live_cam_calibration/proj_time_map.npy"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "X-maps ESL static seq1",
+            "type": "python",
+            "request": "launch",
+            "program": "python/depth_reprojection.py",
+            "args": [
+                "--projector_width",
+                "1080",
+                "--projector_height",
+                "1920",
+                "--calib",
+                "data/ESL_calib_hhi.yaml",
+                "--bias",
+                "/ESL_data/static/seq1/data.bias",
+                "--input",
+                "/ESL_data/static/seq1/data.raw",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+    ]
+}
