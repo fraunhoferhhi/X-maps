@@ -2,24 +2,6 @@
 <a name="readme-top"></a>
 
 
-
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-<!-- [![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
- -->
-
-
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
@@ -33,43 +15,18 @@
     <!-- <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a> -->
     <br />
     <br />
-    <a href="https://fraunhoferhhi.github.io/X-maps/">Project Page</a>
+    <a href="https://fraunhoferhhi.github.io/X-maps/"><strong>Project Page</strong></a>
     ·
-    <a href="https://fraunhoferhhi.github.io/X-maps/paper-html/x-maps-direct-depth-lookup-for-event-based-structured-light-systems.html" target="_blank">Paper (HTML)</a>
+    <a href="https://fraunhoferhhi.github.io/X-maps/paper-html/x-maps-direct-depth-lookup-for-event-based-structured-light-systems.html" target="_blank"><strong>Paper (HTML)</strong></a>
     ·
-    <a href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems.pdf" target="_blank">Paper (PDF)</a>
+    <a href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems.pdf" target="_blank"><strong>Paper (PDF)</strong></a>
   </p>
 
 </div>
 
+This project enables you to utilize event cameras to carry out live depth estimations from images projected with a laser projector. We've streamlined the depth estimation process by creating a lookup image with one spatial and one temporal axis (`y` and `t`), forming an X-map. This idea enables speedy depth calculations (taking less than 3 ms per frame), but also maintains the accuracy of depth estimation through disparity search in time maps. The end result is an efficient, reactive tool for designing real-time Spatial Augmented Reality experiences.
 
-
-<!-- TABLE OF CONTENTS -->
-<!-- <details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details> -->
-
+The entry point for the live depth estimation is `python/depth_reprojection.py`. The script is using the Metavision SDK to facilitate event data capture from Prophesee cameras. For a straightforward environment setup, an `Ubuntu 20.04` Dockerfile is provided. The depth estimation is implemented in Python with NumPy and Numba.
 
 
 <!-- ABOUT THE PROJECT -->
@@ -92,22 +49,6 @@ Use the `BLANK_README.md` to get started.
  -->
 
 
-<!-- ### Built With
-
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
- -->
 
 ## Getting Started
 
@@ -164,7 +105,9 @@ The parameters you can use when running the `depth_reprojection.py` script can b
 | `--bias`  | Specifies the path to the bias file. This is only required for live camera usage. |
 | `--input`  | Specifies the path to either a .raw, .dat file for prerecorded sessions. Leave this parameter out for live capture. |
 
- 
+
+<!-- ## Technical details -->
+
 <!-- USAGE EXAMPLES -->
 <!-- ## Usage
 
