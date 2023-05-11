@@ -40,11 +40,6 @@
     <a href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems.pdf" target="_blank">Paper (PDF)</a>
   </p>
 
-  <p align="center">
-    Code coming soon...
-  <br />
-  </p>
-
 </div>
 
 
@@ -144,13 +139,33 @@ To use data from [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/esl.
 
 Run the target "X-maps ESL static seq1". A window should open that performs a live depth estimation of the book_duck sequence, projected into the projector's view.
 
-### Live depth reprojection
+### Live depth reprojection (Spatial Augmented Reality example)
 
-Edit the target "X-maps live depth reprojection" in `.vscode/launch.json`.
+1. Ensure that the camera is working correctly by running `metavision_player` in a Terminal in VS Code
+2. Calibrate your camera-projector setup, and write the parameters into a YAML file, storing the OpenCV matrices. Examples can be found in `data/`.
+3. Edit the parameters for target "X-maps live depth reprojection" in `.vscode/launch.json`.
+4. Display bright content on the projector to allow the start and end of the frame to be identified (trigger finding).
+5. Running "X-maps live depth reprojection" creates a window that shows the scene depth from the projector's view.
+6. Move the depth reprojection window to the projector to overlay the scene with the measured depth 
 
-Arguments:
-`--bias`: 
+To display the depth in full screen on the projector, use the OS to maximize the window. On Ubuntu, a keyboard shortcut can be set under Settings &rarr; Keyboard &rarr; View and Customize Shortcuts &rarr; Windows &rarr; Toggle fullscreen mode.
 
+
+The parameters you can use when running the `depth_reprojection.py` script can be listed by running `python3 python/depth_reprojection.py --help` in a Terminal in the Docker image in VS Code.
+
+| Parameter  | Explanation |
+| ------------- | ------------- |
+| `--projector-width`  | Defines the width of the projector in pixels. The default value is `720`.  |
+| `--projector-height`  | Defines the height of the projector in pixels. The default value is `1280`.  |
+| `--projector-fps`  | Defines the frames per second (fps) of the projector. The default value is `60`.  |
+| `--projector-time-map`  | Specifies the path to the calibrated projector time map file (*.npy). If this is left empty, a linear time map will be used. |
+| `--z-near`  | Sets the minimum depth in meters (m) for visualization. The default value is `0.1`. |
+| `--z-far`  | Sets the maximum depth in meters (m) for visualization. The default value is `1.0`. |
+| `--calib`  | Specifies the path to a yaml file with camera and projector intrinsic and extrinsic calibration. This parameter is required. |
+| `--bias`  | Specifies the path to the bias file. This is only required for live camera usage. |
+| `--input`  | Specifies the path to either a .raw, .dat file for prerecorded sessions. Leave this parameter out for live capture. |
+
+To use a parameter, simply include it in your command with its associated value, like so: `python depth_reprojection.py --projector-width 800`.
 
  
 <!-- USAGE EXAMPLES -->
