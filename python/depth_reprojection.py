@@ -19,10 +19,6 @@ import sys
 import time
 
 
-# TODO: adapt this to projector
-activity_time_ths = 16666  # Length of the time window for activity filtering (in us)
-trail_filter_ths = 1000000  # Length of the time window for activity filtering (in us)
-
 
 def generate_frame(evs, frame):
     frame[:, :] = 0
@@ -65,6 +61,9 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
     camera_height = 480
 
     pos_filter = PolarityFilterAlgorithm(1)
+
+    # TODO revisit: does this have an effect on latency?
+    activity_time_ths = int(1e6 / projector_fps)
     act_filter = ActivityNoiseFilterAlgorithm(camera_width, camera_height, activity_time_ths)
 
     pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
