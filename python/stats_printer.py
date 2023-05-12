@@ -2,32 +2,119 @@ from time import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 import time
-from typing import Callable, ClassVar, Dict, Optional
+from typing import Any, Callable, ClassVar, Dict, Optional
 
 
 def human_readable_time(elapsed_ns):
-    if abs(elapsed_ns) > 1e9:
-        return f"{elapsed_ns / 1e9:.2f} s"
+    if abs(elapsed_ns) > 60e9:
+        return f"{elapsed_ns / 60e9:6.2f} min"
+    elif abs(elapsed_ns) > 1e9:
+        return f"{elapsed_ns / 1e9:6.2f} s  "
     elif abs(elapsed_ns) > 1e6:
-        return f"{elapsed_ns / 1e6:.2f} ms"
+        return f"{elapsed_ns / 1e6:6.2f} ms "
     elif abs(elapsed_ns) > 1e3:
-        return f"{elapsed_ns / 1e3:.2f} us"
+        return f"{elapsed_ns / 1e3:6.2f} us "
     else:
-        return f"{elapsed_ns:.0f} ns"
+        return f"{elapsed_ns:6.2f} ns "
 
 
 def human_readable_qty(qty):
     if abs(qty) > 1e9:
-        return f"{qty / 1e9:.2f} G"
+        return f"{qty / 1e9:6.2f}G"
     elif abs(qty) > 1e6:
-        return f"{qty / 1e6:.2f} M"
+        return f"{qty / 1e6:6.2f}M"
     elif abs(qty) > 1e3:
-        return f"{qty / 1e3:.2f} k"
+        return f"{qty / 1e3:6.2f}k"
     else:
-        return f"{qty}"
+        if type(qty) == int:
+            return f"{qty:6d} "
+        else:
+            return f"{qty:6.2f} "
     
 def human_readable_ev_qty_per_second(qty, elapsed_ns):
     return f"{human_readable_qty(qty * 1e9 / elapsed_ns)}evps"
+
+@dataclass
+class Occurences:
+    occurences: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    
+    def count(self, name: str, qty: int = 1):
+        self.occurences[name] += qty
+        
+    def print(self):
+        for name, occ in self.occurences.items():
+            print(f"{name}: {human_readable_qty(occ)} | ", end="")
+        print()
+        
+    def reset(self):
+        for name in self.occurences.keys():
+            self.occurences[name] = 0
+            
+    def __getitem__(self, name):
+        return self.occurences[name]
+        
+@dataclass
+class Quantities:
+    qties: Dict[str, float] = field(default_factory=lambda: defaultdict(float))
+    qty_counter: Occurences = field(default_factory=Occurences)
+    fmt: Callable[[float], str] = field(default_factory=lambda: human_readable_qty)
+    
+    def add(self, name: str, qty: float):
+        self.qties[name] += qty
+        self.qty_counter.count(name)
+    
+    def print(self):
+        for name, qty in self.qties.items():
+            print(f"{name} ({human_readable_qty(self.qty_counter[name])}): {self.fmt(qty / self.qty_counter[name])} | ", end="")
+        print()
+    
+    def reset(self):
+        for name in self.qties.keys():
+            self.qties[name] = 0
+        self.qty_counter.reset()
+                
+        
+@dataclass
+class TimeMeasures(Quantities):
+    fmt: Callable[[float], str] = field(default_factory=lambda: human_readable_time)
+    
+
+@dataclass
+class Stats:
+    occurences: Occurences = field(default_factory=Occurences)
+    qties: Quantities = field(default_factory=Quantities)
+    time_measures: TimeMeasures = field(default_factory=TimeMeasures)
+    timers: Dict[str, "StatsTimer"] = field(default_factory=dict)
+    start_time_ns: int = field(default_factory=lambda: time.perf_counter_ns())
+    
+    def count(self, name: str, qty: int):
+        self.occurences.count(name, qty)
+        
+    def add(self, name: str, qty: float):
+        self.qties.add(name, qty)
+        
+    def add_time_measure_ns(self, name: str, elapsed_ns: float):
+        self.time_measures.add(name, elapsed_ns)
+        
+    def elapsed_ns(self):
+        return time.perf_counter_ns() - self.start_time_ns
+        
+    def print_occurrences(self):
+        self.occurences.print() 
+        
+    def print_qties(self):
+        self.qties.print()
+        
+    def print_time_measures(self):
+        self.time_measures.print()
+        
+    def reset(self):
+        self.occurences.reset()
+        self.qties.reset()
+        self.time_measures.reset()
+        self.start_time_ns = time.perf_counter_ns()
+
+    
 
 class StatsPrinter:
     """Utility class to print statistics about the execution of the code.
@@ -41,40 +128,21 @@ class StatsPrinter:
     def __init__(self, print_every_ms=1000):
         self.print_every_ms = print_every_ms
 
-        self.last_print_time = time.perf_counter_ns()
         self.have_printed = False
 
-        self.occurences = defaultdict(int)
-
-        self.measures = defaultdict(float)
-        self.measure_counter = defaultdict(int)
-
-        self.timers = dict()
-        self.time_measures = defaultdict(float)
-        self.time_measure_counter = defaultdict(int)
+        self.local_stats = Stats()
+        self.global_stats = Stats()
         
-        self.processed_events = 0
-        self.global_processed_events = 0
-        
-        self.global_timer = SingleTimer("Total runtime")
-        
-    def __del__(self):
-        print("")
-        self.global_timer.stop()
-        print(f"Total events processed: {human_readable_qty(self.global_processed_events)}")
-        print(f"Event throughput: {human_readable_ev_qty_per_second(self.global_processed_events, self.global_timer.elapsed_ns())}")
-        
-    def count_processed_events(self, num_events):
-        self.processed_events += num_events
-
-    def count_occurrence(self, key):
+       
+    def count(self, key, qty=1):
         """Count occurrences of a certain type (e.g. "trigger found")"""
-        self.occurences[key] += 1
+        self.local_stats.count(key, qty)
+        self.global_stats.count(key, qty)
 
     def add_metric(self, key, val):
         """Mesure a certain metric (e.g. "frame len [ms]")"""
-        self.measures[key] += val
-        self.measure_counter[key] += 1
+        self.local_stats.add(key, val)
+        self.global_stats.add(key, val)
 
     def measure_time(self, key):
         """Time the execution of the code in the context manager
@@ -84,54 +152,35 @@ class StatsPrinter:
         return StatsTimer(stats_printer=self, key=key)
     
     def add_time_measure_ns(self, key, elapsed_ns):
-        self.time_measures[key] += elapsed_ns
-        self.time_measure_counter[key] += 1
+        self.local_stats.add_time_measure_ns(key, elapsed_ns)
+        self.global_stats.add_time_measure_ns(key, elapsed_ns)
     
     def print_stats(self):
-        if not self.global_timer.is_running():
-            self.global_timer.start()
         
-        # print stats once a second
-        elapsed_ns = time.perf_counter_ns() - self.last_print_time
-        if elapsed_ns < self.print_every_ms * 1e6:
+        if self.local_stats.elapsed_ns() < self.print_every_ms * 1e6:
             return
 
         if self.have_printed:
-            # Move cursor up by 4 lines
-            print("\033[4A", end='')
+            # Move cursor up by 6 lines
+            print("\033[6A", end='')
             # Clear the screen from cursor to end
             print("\033[J", end='')
 
-        line = f"{human_readable_time(elapsed_ns)}: "
-        line += f"evs: {human_readable_qty(self.processed_events)} @ {human_readable_ev_qty_per_second(self.processed_events, elapsed_ns)}"
-        print(line)
+        red = "\033[31m"
+        green = "\033[32m"
+        reset_color = "\033[0m"
 
-        line = ""
-        for k, v in sorted(self.time_measures.items()):
-            avg_time_ns = v / self.time_measure_counter[k]
-            line += f"{k} ({self.time_measure_counter[k]}): {human_readable_time(avg_time_ns)} | "
-        print(line)
-
-        line = ""
-        for k, v in sorted(self.measures.items()):
-            line += f"{k} ({self.measure_counter[k]}): {v / self.measure_counter[k]:.2f} | "
-        print(line)
-
-        line = ""
-        for k, v in sorted(self.occurences.items()):
-            line += f"{k}: {v} | "
-            self.occurences[k] = 0
-        print(line)
-
-        self.global_processed_events += self.processed_events
-        self.processed_events = 0
-
-        self.measures.clear()
-        self.measure_counter.clear()
-
-        self.time_measures.clear()
-        self.time_measure_counter.clear()
-
+        self.local_stats.print_occurrences()
+        self.global_stats.print_occurrences()
+        
+        self.local_stats.print_qties()
+        self.global_stats.print_qties()
+        
+        self.local_stats.print_time_measures()
+        self.global_stats.print_time_measures()
+        
+        self.local_stats.reset()
+        
         self.last_print_time = time.perf_counter_ns()
         
         self.have_printed = True

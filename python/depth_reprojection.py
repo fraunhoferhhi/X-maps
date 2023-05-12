@@ -81,8 +81,6 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
     last_frame_produced_time = -1
 
-    stats_printer = StatsPrinter()
-    
     should_drop_frames = not cli_params["no_frame_dropping"]
 
     with SingleTimer("Setting up calibration"):
@@ -101,6 +99,8 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
     with MTWindow(
         title="X Maps Depth", width=projector_width, height=projector_height, mode=BaseWindow.RenderMode.BGR
     ) as window:
+
+        stats_printer = StatsPrinter()
 
         def on_frame_evs(evs):
             """Callback from the trigger finder, evs contain the events of the current frame"""
@@ -175,7 +175,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
                         trigger_finder.drop_frame()
 
                     stats_printer.print_stats()
-                    stats_printer.count_processed_events(len(evs))
+                    stats_printer.count("processed evs", len(evs))
 
                     pos_filter.process_events(evs, pos_events_buf)
                     act_filter.process_events(pos_events_buf, act_events_buf)

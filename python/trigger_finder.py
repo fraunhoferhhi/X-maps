@@ -145,7 +145,7 @@ class RobustTriggerFinder:
             next_frame_first_event = np.argmax(evs_next_frame_or_later)
             # print(f"Dropping {next_frame_first_event} events!")
             self.ev_buf = self.ev_buf[next_frame_first_event:]
-            self.stats.count_occurrence("frame dropped")
+            self.stats.count("frame dropped")
             self.should_drop = False
 
         if len(self.ev_buf) < 2:
@@ -155,7 +155,7 @@ class RobustTriggerFinder:
         if self.ev_buf["t"][-1] - self.ev_buf["t"][0] < 1e6 / self.projector_fps:
             return
 
-        self.stats.add_metric("buf #ev [k]", len(self.ev_buf) / 1000)
+        self.stats.add_metric("buf #ev", len(self.ev_buf))
         # self.stats.add_metric("buf ev t [ms]", (self.ev_buf["t"][-1] - self.ev_buf["t"][0]) / 1000)
 
         # ignore camera time, we don't know how many events are still waiting to be processed
@@ -175,10 +175,10 @@ class RobustTriggerFinder:
             ev_time = self.find_trigger() / 1000
         if ev_time > 0:
             self.last_frame_start_event_time_ms = ev_time
-            self.stats.count_occurrence("trig ✅")
+            self.stats.count("trig ✅")
             self.last_frame_start_cpu_time_ms = time.perf_counter() * 1000
         else:
-            self.stats.count_occurrence("trig ❌")
+            self.stats.count("trig ❌")
 
         # if self.acc_cpu_ev_time_diff_ms > 1e3 / self.projector_fps:
         #     self.stats.count_occurrence("acc > 1 frame")
