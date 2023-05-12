@@ -1,7 +1,5 @@
 # TODO if the image is disturbed (hand too close to camera?), the processing slows down a lot after
 
-# TODO remove EventsIterator
-
 # TODO perf reduce delta_t as much as possible to reduce latency
 
 from metavision_sdk_core import PolarityFilterAlgorithm
