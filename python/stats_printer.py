@@ -85,6 +85,10 @@ class StatsPrinter:
         """
         return StatsTimer(stats_printer=self, key=key)
     
+    def add_time_measure_ns(self, key, elapsed_ns):
+        self.time_measures[key] += elapsed_ns
+        self.time_measure_counter[key] += 1
+    
     def print_stats(self):
         # print stats once a second
         elapsed_ns = time.perf_counter_ns() - self.last_print_time
@@ -140,11 +144,8 @@ class StatsTimer:
         return self
 
     def __exit__(self, *exc_info):
-        elapsed_time = time.perf_counter_ns() - self.start_time
-
-        self.stats_printer.time_measures[self.key] += elapsed_time
-        self.stats_printer.time_measure_counter[self.key] += 1
-
+        elapsed_time_ns = time.perf_counter_ns() - self.start_time
+        self.stats_printer.add_time_measure_ns(self.key, elapsed_time_ns)
         return False
 
 
