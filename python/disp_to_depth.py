@@ -64,7 +64,8 @@ def disparity_to_depth_rectified(disparity, P1):
 
 
 class DisparityToDepth:
-    def __init__(self, calib, z_near, z_far):
+    def __init__(self, stats, calib, z_near, z_far):
+        self.stats = stats
         self.calib = calib
         self.z_near = z_near
         self.z_far = z_far
@@ -80,22 +81,27 @@ class DisparityToDepth:
         # For a dense depth map from the projectors point of view, the pixels are dilated.
 
         # TODO perf this gets faster with a larger kernel.. why?
-        disp_map = cv2.dilate(disp_map, self.dilate_kernel)
+        with self.stats.measure_time("dilate"):
+            disp_map = cv2.dilate(disp_map, self.dilate_kernel)
 
         # get depth map from rectified disparity map and append to list of depth maps
         # NOTE: This depth calculatoin is quick but not correct. It does not take into account the
         # change of depth during the rotation back from the rectified coordinate system to the
         # unrectified coordinate system.
-        depth_map_f32 = disparity_to_depth_rectified(
-            cv2.remap(
-                disp_map, self.calib.disp_proj_mapx, self.calib.disp_proj_mapy, cv2.INTER_NEAREST, cv2.BORDER_CONSTANT
-            ),
-            self.calib.P2,
-        )
+        with self.stats.measure_time("d2d_rect"):
+
+            depth_map_f32 = disparity_to_depth_rectified(
+                cv2.remap(
+                    disp_map, self.calib.disp_proj_mapx, self.calib.disp_proj_mapy, cv2.INTER_NEAREST, cv2.BORDER_CONSTANT
+                ),
+                self.calib.P2,
+            )
 
         # TODO perf Numba impl?
-        depth_map_u8 = clip_normalize_uint8_depth_frame(depth_map_f32, min_value=self.z_near, max_value=self.z_far)
+        with self.stats.measure_time("clip_norm"):
+            depth_map_u8 = clip_normalize_uint8_depth_frame(depth_map_f32, min_value=self.z_near, max_value=self.z_far)
 
-        frame = generate_color_map(depth_map_u8)
+        with self.stats.measure_time("color_map"):
+            frame = generate_color_map(depth_map_u8)
 
         return frame

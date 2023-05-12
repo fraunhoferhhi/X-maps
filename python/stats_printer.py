@@ -172,6 +172,10 @@ class StatsPrinter:
         if self.local_stats.elapsed_ns() >= self.print_every_ms * 1e6:
             self.print_stats()
 
+    def reset(self):
+        self.local_stats.reset()
+        self.global_stats.reset()
+
     
     def print_stats(self):
         

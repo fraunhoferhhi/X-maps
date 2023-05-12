@@ -75,6 +75,8 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
     should_drop_frames = not cli_params["no_frame_dropping"]
 
+    stats_printer = StatsPrinter()
+
     with SingleTimer("Setting up calibration"):
         calib_obj = CamProjCalibration(cli_params["calib"], camera_width, camera_height, projector_width, projector_height)
 
@@ -85,14 +87,14 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
         x_maps_disp = XMapsDisparity(calib_obj, proj_time_map, projector_width)
 
     with SingleTimer("Setting up disparity to depth"):
-        disp_to_depth = DisparityToDepth(calib_obj, cli_params["z_near"], cli_params["z_far"])
+        disp_to_depth = DisparityToDepth(stats_printer, calib_obj, cli_params["z_near"], cli_params["z_far"])
 
     # Window - Graphical User Interface (Display filtered events and process keyboard events)
     with MTWindow(
         title="X Maps Depth", width=projector_width, height=projector_height, mode=BaseWindow.RenderMode.BGR
     ) as window:
-
-        stats_printer = StatsPrinter()
+        
+        stats_printer.reset()
 
         def on_frame_evs(evs):
             """Callback from the trigger finder, evs contain the events of the current frame"""
@@ -124,7 +126,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
         def main_loop():
             nonlocal last_frame_produced_time
-            mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
+            mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"])
             # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
             cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 

@@ -1,3 +1,10 @@
+# TODO find trigger stat time is so long because the callback is part of it, and is measured with it
+#      --> measure trigger finding by itself
+
+# TODO perf --> disp2depth is the slow one: particularly the 255 masking in the color map :o
+
+# TODO perf: next biggest perf issue: the trigger concat --> use a ring buffer
+
 import numpy as np
 import time
 from metavision_sdk_base import EventCD
@@ -139,8 +146,13 @@ class RobustTriggerFinder:
 
         # find the indicies of the events which have a relative long time difference to their respective next event in the buffer
 
-        # TODO perf: this is recomputed a lot
-        frame_paused_ev_idx = np.nonzero(np.diff(self.ev_buf["t"]) >= self.frame_paused_thresh_us)[0]
+        # perf: is this recomputed a lot? - no, not at all, usually there's a whole frame worth of events here, so it is not
+        with self.stats.measure_time("find pauses"):
+            frame_paused_ev_idx = np.nonzero(np.diff(self.ev_buf["t"]) >= self.frame_paused_thresh_us)[0]
+        
+        # offline: avg 4
+        # online: avg 2
+        # self.stats.add_metric("frame pauses", len(frame_paused_ev_idx))
 
         for prev_idx, next_idx in zip(frame_paused_ev_idx[:-1], frame_paused_ev_idx[1:]):
             # time between event pauses
