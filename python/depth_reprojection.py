@@ -148,18 +148,19 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
                     EventLoop.poll_and_dispatch()
 
                     stats_printer.print_stats()
+                    stats_printer.count_processed_events(len(evs))
 
                     pos_filter.process_events(evs, pos_events_buf)
                     act_filter.process_events(pos_events_buf, act_events_buf)
 
                     time_since_last_finished_frame_ms = (time.perf_counter() - last_frame_produced_time) * 1000
 
-                    if last_frame_produced_time != -1 and time_since_last_finished_frame_ms > 13:
-                        print("")
-                        print(f"time since last frame: {time_since_last_finished_frame_ms}, resetting!")
-                        trigger_finder.reset_buffer()
-                        last_frame_produced_time = -1
-                        return True
+                    # if last_frame_produced_time != -1 and time_since_last_finished_frame_ms > 13:
+                    #     print("")
+                    #     print(f"time since last frame: {time_since_last_finished_frame_ms}, resetting!")
+                    #     trigger_finder.reset_buffer()
+                    #     last_frame_produced_time = -1
+                    #     return True
 
                     trigger_finder.process_events(act_events_buf)
 

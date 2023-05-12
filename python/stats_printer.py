@@ -16,6 +16,19 @@ def human_readable_time(elapsed_ns):
         return f"{elapsed_ns} ns"
 
 
+def human_readable_qty(qty):
+    if qty > 1e9:
+        return f"{qty / 1e9:.2f} G"
+    elif qty > 1e6:
+        return f"{qty / 1e6:.2f} M"
+    elif qty > 1e3:
+        return f"{qty / 1e3:.2f} k"
+    else:
+        return f"{qty}"
+    
+def human_readable_ev_qty_per_second(qty, elapsed_ns):
+    return f"{human_readable_qty(qty * 1e9 / elapsed_ns)}evps"
+
 class StatsPrinter:
     """Utility class to print statistics about the execution of the code.
 
@@ -31,7 +44,7 @@ class StatsPrinter:
         self.last_print_time = time.perf_counter_ns()
         self.prev_line_len = 0
 
-        self.stats = defaultdict(int)
+        self.occurences = defaultdict(int)
 
         self.measures = defaultdict(float)
         self.measure_counter = defaultdict(int)
@@ -39,10 +52,26 @@ class StatsPrinter:
         self.timers = dict()
         self.time_measures = defaultdict(float)
         self.time_measure_counter = defaultdict(int)
+        
+        self.processed_events = 0
+        self.global_processed_events = 0
+        
+        self.global_timer = SingleTimer("Total runtime")
+        
+    def __del__(self):
+        print("")
+        self.global_timer.stop()
+        print(f"Total events processed: {human_readable_qty(self.global_processed_events)}")
+        print(f"Event throughput: {human_readable_ev_qty_per_second(self.global_processed_events, self.global_timer.elapsed_ns())}")
+        
+    def count_processed_events(self, num_events):
+        if not self.global_timer.is_running():
+            self.global_timer.start()
+        self.processed_events += num_events
 
     def count_occurrence(self, key):
         """Count occurrences of a certain type (e.g. "trigger found")"""
-        self.stats[key] += 1
+        self.occurences[key] += 1
 
     def add_metric(self, key, val):
         """Mesure a certain metric (e.g. "frame len [ms]")"""
@@ -55,36 +84,45 @@ class StatsPrinter:
                      do_something()
         """
         return StatsTimer(stats_printer=self, key=key)
-
+    
     def print_stats(self):
-        if time.perf_counter_ns() - self.last_print_time >= self.print_every_ms * 1e6:
-            print("\r", end="")
-            print(" " * self.prev_line_len, end="")
-            print("\r", end="")
+        # print stats once a second
+        elapsed_ns = time.perf_counter_ns() - self.last_print_time
+        if elapsed_ns < self.print_every_ms * 1e6:
+            return
 
-            line = ""
+        print("\r", end="")
+        print(" " * self.prev_line_len, end="")
+        print("\r", end="")
 
-            for k, v in sorted(self.time_measures.items()):
-                avg_time_ns = v / self.time_measure_counter[k]
-                line += f"{k} ({self.time_measure_counter[k]}): {human_readable_time(avg_time_ns)} | "
+        line = f"{human_readable_time(elapsed_ns)}: "
 
-            for k, v in sorted(self.measures.items()):
-                line += f"{k} ({self.measure_counter[k]}): {v / self.measure_counter[k]:.2f} | "
+        line += f"evs: {human_readable_qty(self.processed_events)} @ {human_readable_ev_qty_per_second(self.processed_events, elapsed_ns)} | "
 
-            for k, v in sorted(self.stats.items()):
-                line += f"{k}: {v} | "
-                self.stats[k] = 0
+        for k, v in sorted(self.time_measures.items()):
+            avg_time_ns = v / self.time_measure_counter[k]
+            line += f"{k} ({self.time_measure_counter[k]}): {human_readable_time(avg_time_ns)} | "
 
-            print(line, end="")
-            self.prev_line_len = len(line)
+        for k, v in sorted(self.measures.items()):
+            line += f"{k} ({self.measure_counter[k]}): {v / self.measure_counter[k]:.2f} | "
 
-            self.measures.clear()
-            self.measure_counter.clear()
+        for k, v in sorted(self.occurences.items()):
+            line += f"{k}: {v} | "
+            self.occurences[k] = 0
 
-            self.time_measures.clear()
-            self.time_measure_counter.clear()
+        print(line, end="")
+        self.prev_line_len = len(line)
 
-            self.last_print_time = time.perf_counter_ns()
+        self.global_processed_events += self.processed_events
+        self.processed_events = 0
+
+        self.measures.clear()
+        self.measure_counter.clear()
+
+        self.time_measures.clear()
+        self.time_measure_counter.clear()
+
+        self.last_print_time = time.perf_counter_ns()
 
 
 @dataclass
@@ -117,14 +155,36 @@ class SingleTimer:
 
     message: str
     start_time: int = field(init=False)
+    started: bool = False
+    
+    def start(self):
+        if self.started:
+            raise Exception("Timer already started")
+        self.start_time = time.perf_counter_ns()
+        self.started = True
+        return self
+        
+    def stop(self):
+        if not self.started:
+            raise Exception("Timer not started")
+        self.elapsed_time_ns = time.perf_counter_ns() - self.start_time
+        print(f"{self.message}: {human_readable_time(self.elapsed_time_ns)}")
+        self.started = False
+        
+    def is_running(self):
+        return self.started
+
+    def elapsed_ns(self):
+        if self.started:
+            return time.perf_counter_ns() - self.start_time
+        else:
+            return self.elapsed_time_ns
 
     def __enter__(self):
-        self.start_time = time.perf_counter_ns()
+        self.start()
         return self
 
     def __exit__(self, *exc_info):
-        elapsed_time = time.perf_counter_ns() - self.start_time
-
-        print(f"{self.message}: {human_readable_time(elapsed_time)}")
-
+        self.stop()
         return False
+
