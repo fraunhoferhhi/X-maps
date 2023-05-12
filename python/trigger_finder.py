@@ -101,7 +101,6 @@ class RobustTriggerFinder:
         self.ev_buf = np.array([], dtype=EventCD)
 
     def drop_frame(self):
-        print("Scheduling drop")
         self.should_drop = True
 
     def process_events(self, evs):
@@ -146,6 +145,7 @@ class RobustTriggerFinder:
             next_frame_first_event = np.argmax(evs_next_frame_or_later)
             # print(f"Dropping {next_frame_first_event} events!")
             self.ev_buf = self.ev_buf[next_frame_first_event:]
+            self.stats.count_occurrence("frame dropped")
             self.should_drop = False
 
         if len(self.ev_buf) < 2:
@@ -156,7 +156,7 @@ class RobustTriggerFinder:
             return
 
         self.stats.add_metric("buf #ev [k]", len(self.ev_buf) / 1000)
-        self.stats.add_metric("buf ev t [ms]", (self.ev_buf["t"][-1] - self.ev_buf["t"][0]) / 1000)
+        # self.stats.add_metric("buf ev t [ms]", (self.ev_buf["t"][-1] - self.ev_buf["t"][0]) / 1000)
 
         # ignore camera time, we don't know how many events are still waiting to be processed
 
@@ -171,14 +171,14 @@ class RobustTriggerFinder:
         #     self.stats.add_metric("cpu diff [ms]", cpu_time_diff_ms)
         #     self.stats.add_metric("ev diff [ms]", ev_time_diff_ms)
 
-        with self.stats.measure_time("find trigger"):
+        with self.stats.measure_time("ftrig"):
             ev_time = self.find_trigger() / 1000
         if ev_time > 0:
             self.last_frame_start_event_time_ms = ev_time
-            self.stats.count_occurrence("trigger ✅")
+            self.stats.count_occurrence("trig ✅")
             self.last_frame_start_cpu_time_ms = time.perf_counter() * 1000
-        # else:
-        #     self.stats.count_occurrence("trigger ❌")
+        else:
+            self.stats.count_occurrence("trig ❌")
 
         # if self.acc_cpu_ev_time_diff_ms > 1e3 / self.projector_fps:
         #     self.stats.count_occurrence("acc > 1 frame")
@@ -209,7 +209,7 @@ class RobustTriggerFinder:
                     start_time = self.ev_buf["t"][prev_idx + 2]
                     end_time = self.ev_buf["t"][next_idx - 2]
 
-                    self.stats.add_metric("framelen [ms]", (end_time - start_time) / 1000)
+                    self.stats.add_metric("frlen", (end_time - start_time) / 1000)
 
                     self.ev_buf = self.ev_buf[next_idx - 2 :]
                     return start_time

@@ -142,6 +142,9 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
             assert cam_height_reader == camera_height
             assert cam_width_reader == camera_width
 
+            first_event_time_us = -1
+            start_time = time.perf_counter_ns()
+
             # Process events
             for evs in mv_iterator:
             # while not mv_iterator.is_done():
@@ -150,6 +153,24 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
                     # Dispatch system events to the window
                     EventLoop.poll_and_dispatch()
+                    
+                    if first_event_time_us == -1:
+                        first_event_time_us = evs["t"][0]
+                        print(f"first event time: {first_event_time_us}")
+                        print("")
+                        
+                    ev_time_diff_ns = (evs["t"][0] - first_event_time_us) * 1000
+                    proc_time_diff_ns = time.perf_counter_ns() - start_time
+                    proc_behind = proc_time_diff_ns - ev_time_diff_ns
+                    
+                    # stats_printer.add_time_measure_ns("ev t", ev_time_diff_ns)
+                    # stats_printer.add_time_measure_ns("pr t", proc_time_diff_ns)
+                    # stats_printer.add_time_measure_ns("pr b", proc_behind)
+                    
+                    frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / projector_fps))
+                    stats_printer.add_metric("frames behind", frames_behind_i)
+                    if frames_behind_i > 0:
+                        trigger_finder.drop_frame()
 
                     stats_printer.print_stats()
                     stats_printer.count_processed_events(len(evs))
