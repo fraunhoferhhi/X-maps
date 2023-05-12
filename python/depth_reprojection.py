@@ -173,7 +173,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
                     if frames_behind_i > 0 and should_drop_frames:
                         trigger_finder.drop_frame()
 
-                    stats_printer.print_stats()
+                    stats_printer.print_stats_if_needed()
                     stats_printer.count("processed evs", len(evs))
 
                     pos_filter.process_events(evs, pos_events_buf)
@@ -189,10 +189,14 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
                     #     return True
 
                     trigger_finder.process_events(act_events_buf)
+                    
+                    stats_printer.print_stats_if_needed()
 
                     if window.should_close():
+                        stats_printer.print_stats()
                         sys.exit(0)
-        
+
+            stats_printer.print_stats()        
             return False
 
         while main_loop():

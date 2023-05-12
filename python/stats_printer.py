@@ -166,12 +166,14 @@ class StatsPrinter:
     def add_time_measure_ns(self, key, elapsed_ns):
         self.local_stats.add_time_measure_ns(key, elapsed_ns)
         self.global_stats.add_time_measure_ns(key, elapsed_ns)
+
+    def print_stats_if_needed(self):
+        if self.local_stats.elapsed_ns() >= self.print_every_ms * 1e6:
+            self.print_stats()
+
     
     def print_stats(self):
         
-        if self.local_stats.elapsed_ns() < self.print_every_ms * 1e6:
-            return
-
         if self.have_printed:
             # Move cursor up by 11 lines
             print("\033[11A", end='')
