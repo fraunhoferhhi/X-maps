@@ -42,7 +42,7 @@ class StatsPrinter:
         self.print_every_ms = print_every_ms
 
         self.last_print_time = time.perf_counter_ns()
-        self.prev_line_len = 0
+        self.have_printed = False
 
         self.occurences = defaultdict(int)
 
@@ -65,8 +65,6 @@ class StatsPrinter:
         print(f"Event throughput: {human_readable_ev_qty_per_second(self.global_processed_events, self.global_timer.elapsed_ns())}")
         
     def count_processed_events(self, num_events):
-        if not self.global_timer.is_running():
-            self.global_timer.start()
         self.processed_events += num_events
 
     def count_occurrence(self, key):
@@ -90,32 +88,40 @@ class StatsPrinter:
         self.time_measure_counter[key] += 1
     
     def print_stats(self):
+        if not self.global_timer.is_running():
+            self.global_timer.start()
+        
         # print stats once a second
         elapsed_ns = time.perf_counter_ns() - self.last_print_time
         if elapsed_ns < self.print_every_ms * 1e6:
             return
 
-        print("\r", end="")
-        print(" " * self.prev_line_len, end="")
-        print("\r", end="")
+        if self.have_printed:
+            # Move cursor up by 4 lines
+            print("\033[4A", end='')
+            # Clear the screen from cursor to end
+            print("\033[J", end='')
 
         line = f"{human_readable_time(elapsed_ns)}: "
+        line += f"evs: {human_readable_qty(self.processed_events)} @ {human_readable_ev_qty_per_second(self.processed_events, elapsed_ns)}"
+        print(line)
 
-        line += f"evs: {human_readable_qty(self.processed_events)} @ {human_readable_ev_qty_per_second(self.processed_events, elapsed_ns)} | "
-
+        line = ""
         for k, v in sorted(self.time_measures.items()):
             avg_time_ns = v / self.time_measure_counter[k]
             line += f"{k} ({self.time_measure_counter[k]}): {human_readable_time(avg_time_ns)} | "
+        print(line)
 
+        line = ""
         for k, v in sorted(self.measures.items()):
             line += f"{k} ({self.measure_counter[k]}): {v / self.measure_counter[k]:.2f} | "
+        print(line)
 
+        line = ""
         for k, v in sorted(self.occurences.items()):
             line += f"{k}: {v} | "
             self.occurences[k] = 0
-
-        print(line, end="")
-        self.prev_line_len = len(line)
+        print(line)
 
         self.global_processed_events += self.processed_events
         self.processed_events = 0
@@ -127,6 +133,8 @@ class StatsPrinter:
         self.time_measure_counter.clear()
 
         self.last_print_time = time.perf_counter_ns()
+        
+        self.have_printed = True
 
 
 @dataclass
