@@ -73,7 +73,8 @@ class Quantities:
     def print_avg(self):
         print("avg ", end="")
         for name, qty in sorted(self.qties.items()):
-            print(f"{name}: {self.fmt(qty / self.qty_counter[name])} | ", end="")
+            count = max(self.qty_counter[name], 1)
+            print(f"{name}: {self.fmt(qty / count)} | ", end="")
         print()
     
     def reset(self):
