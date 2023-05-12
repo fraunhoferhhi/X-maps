@@ -55,7 +55,7 @@ def generate_frame(evs, frame):
 )
 @click.option("--bias", help="Path to bias file, only required for live camera", type=click.Path())
 @click.option("--input", help="Either a .raw, .dat file for prerecordings. Don't specify for live capture.", type=click.Path())
-# def main(projector_width, projector_height, projector_fps, projector_time_map, znear, zfar, calib, bias, input):
+@click.option("--no-frame-dropping", help="Process all events, even when processing lags behind the event stream", is_flag=True)
 def main(projector_width, projector_height, projector_fps, **cli_params):
     print("Code sample showing how to create a simple application testing different noise filtering strategies.")
     print(
@@ -82,6 +82,8 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
     last_frame_produced_time = -1
 
     stats_printer = StatsPrinter()
+    
+    should_drop_frames = not cli_params["no_frame_dropping"]
 
     with SingleTimer("Setting up calibration"):
         calib_obj = CamProjCalibration(cli_params["calib"], camera_width, camera_height, projector_width, projector_height)
@@ -133,8 +135,8 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
             # Catching up on the events on a live stream will be tricky
             # TODO implement a proper way to reset the event stream
             # TODO perf get rid of EventsIterator, use MetaEventBufferProducer directly
-            # mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=16000, bias_file=cli_params["bias"])
-            mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
+            mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
+            # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
             cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
             last_frame_produced_time = -1
@@ -146,10 +148,10 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
             start_time = time.perf_counter_ns()
 
             # Process events
-            for evs in mv_iterator:
-            # while not mv_iterator.is_done():
+            # for evs in mv_iterator:
+            while not mv_iterator.is_done():
                 with stats_printer.measure_time("main loop"):
-                    # evs = mv_iterator.get_events()
+                    evs = mv_iterator.get_events()
 
                     # Dispatch system events to the window
                     EventLoop.poll_and_dispatch()
@@ -163,13 +165,13 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
                     proc_time_diff_ns = time.perf_counter_ns() - start_time
                     proc_behind = proc_time_diff_ns - ev_time_diff_ns
                     
-                    # stats_printer.add_time_measure_ns("ev t", ev_time_diff_ns)
-                    # stats_printer.add_time_measure_ns("pr t", proc_time_diff_ns)
-                    # stats_printer.add_time_measure_ns("pr b", proc_behind)
+                    stats_printer.add_time_measure_ns("ev t", ev_time_diff_ns)
+                    stats_printer.add_time_measure_ns("pr t", proc_time_diff_ns)
+                    stats_printer.add_time_measure_ns("pr b", proc_behind)
                     
                     frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / projector_fps))
                     stats_printer.add_metric("frames behind", frames_behind_i)
-                    if frames_behind_i > 0:
+                    if frames_behind_i > 0 and should_drop_frames:
                         trigger_finder.drop_frame()
 
                     stats_printer.print_stats()

@@ -42,6 +42,7 @@
                 "0.1",
                 "--z-far",
                 "1.2",
+                "--no-frame-dropping",
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

@@ -104,6 +104,7 @@ The parameters you can use when running the `depth_reprojection.py` script can b
 | `--calib`  | Specifies the path to a yaml file with camera and projector intrinsic and extrinsic calibration. This parameter is required. |
 | `--bias`  | Specifies the path to the bias file. This is only required for live camera usage. |
 | `--input`  | Specifies the path to either a .raw, .dat file for prerecorded sessions. Leave this parameter out for live capture. |
+| `--no-frame-dropping` | By default, events are dropped when the processing is too slow. Use this parameter to disable frame dropping, and process all incoming events. |
 
 
 <!-- ## Technical details -->
