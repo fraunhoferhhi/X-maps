@@ -1,5 +1,3 @@
-# TODO if the image is disturbed (hand too close to camera?), the processing slows down a lot after
-
 # TODO perf reduce delta_t as much as possible to reduce latency
 
 from metavision_sdk_core import PolarityFilterAlgorithm
@@ -127,11 +125,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
         def main_loop():
             nonlocal last_frame_produced_time
-            # Setting up calibration, time maps and x-maps may take considerable time
-            # Catching up on the events on a live stream will be tricky
-            # TODO implement a proper way to reset the event stream
-            # TODO perf get rid of EventsIterator, use MetaEventBufferProducer directly
-            mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"])
+            mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
             # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
             cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
@@ -144,13 +138,14 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
             start_time = time.perf_counter_ns()
 
             # Process events
-            # for evs in mv_iterator:
-            while not mv_iterator.is_done():
+            for evs in mv_iterator:
                 with stats_printer.measure_time("main loop"):
-                    evs = mv_iterator.get_events()
                     
                     # Dispatch system events to the window
                     EventLoop.poll_and_dispatch()
+                    
+                    if not len(evs):
+                        continue
                     
                     if first_event_time_us == -1:
                         first_event_time_us = evs["t"][0]

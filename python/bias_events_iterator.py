@@ -90,10 +90,9 @@ class NonBufferedBiasEventsIterator:
         else:
             self.reader = RawReaderBase(input_filename, delta_t=delta_t)
 
-    def get_events(self):
-        if self.reader.is_done():
-            return None
-        return self.reader.load_delta_t(-1)
+    def __iter__(self):
+        while not self.reader.is_done():
+            yield self.reader.load_delta_t(-1)
     
     def is_done(self):
         return self.reader.is_done()
