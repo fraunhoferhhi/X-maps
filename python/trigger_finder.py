@@ -90,11 +90,6 @@ class RobustTriggerFinder:
 
         self.frame_len_ms = 1e3 / self.projector_fps
 
-        self.last_frame_start_cpu_time_ms = -1
-        self.last_frame_start_event_time_ms = -1
-
-        self.acc_cpu_ev_time_diff_ms = -1
-
         self.should_drop = False
 
     def reset_buffer(self):
@@ -107,32 +102,8 @@ class RobustTriggerFinder:
         # TODO perf use a ring buffer
         # e.g. np-rw-buffer
         # TODO investigate: EventIterator from Metavision just uses a deque in MetaEventBufferProducer
-        self.ev_buf = np.append(self.ev_buf, evs.numpy())
-
-        # # if time_since_last_frame_ms > self.frame_len_ms and not self.have_dropped:
-        # #     if len(self.ev_buf) < 1:
-        # #         return
-
-        # #     print(f"time since last frame {time_since_last_frame_ms}")
-
-        #     # # drop one frame worth of events
-        #     # buf_start_t = self.ev_buf["t"][0]
-        #     # evs_next_frame_or_later = self.ev_buf["t"] >= buf_start_t + self.frame_len_ms * 1000
-        #     # if not evs_next_frame_or_later.any():
-        #     #     # we don't have a frame worth's events to drop yet, return and request more
-        #     #     return
-
-        #     # next_frame_first_event = np.argmax(evs_next_frame_or_later)
-        #     # print(f"Dropping {next_frame_first_event} events!")
-        #     # self.ev_buf = self.ev_buf[next_frame_first_event:]
-        #     self.ev_buf = np.array([], dtype=EventCD)
-        #     self.have_dropped = True
-
-        # if time_since_last_frame_ms > self.frame_len_ms and not self.have_dropped:
-        #     if len(self.ev_buf) < 1:
-        #         return
-
-        #     print(f"time since last frame {time_since_last_frame_ms}")
+        with self.stats.measure_time("append events"):
+            self.ev_buf = np.append(self.ev_buf, evs.numpy())
 
         if self.should_drop:
             # drop one frame worth of events
@@ -143,7 +114,6 @@ class RobustTriggerFinder:
                 return
 
             next_frame_first_event = np.argmax(evs_next_frame_or_later)
-            # print(f"Dropping {next_frame_first_event} events!")
             self.ev_buf = self.ev_buf[next_frame_first_event:]
             self.stats.count("frames dropped")
             self.should_drop = False
@@ -156,34 +126,13 @@ class RobustTriggerFinder:
             return
 
         self.stats.add_metric("evs in buf", len(self.ev_buf))
-        # self.stats.add_metric("buf ev t [ms]", (self.ev_buf["t"][-1] - self.ev_buf["t"][0]) / 1000)
-
-        # ignore camera time, we don't know how many events are still waiting to be processed
-
-        # if we haven't generated a frame in the last 32 ms, drop
-
-        # if self.last_frame_start_cpu_time_ms != -1 and self.last_frame_start_event_time_ms != -1:
-        #     cpu_time_diff_ms = time.perf_counter() * 1000 - self.last_frame_start_cpu_time_ms
-        #     ev_time_diff_ms = self.ev_buf["t"][-1] / 1000 - self.last_frame_start_event_time_ms
-        #     cpu_ev_diff = cpu_time_diff_ms - ev_time_diff_ms
-        #     if cpu_ev_diff > 0:
-        #         self.acc_cpu_ev_time_diff_ms += cpu_ev_diff
-        #     self.stats.add_metric("cpu diff [ms]", cpu_time_diff_ms)
-        #     self.stats.add_metric("ev diff [ms]", ev_time_diff_ms)
 
         with self.stats.measure_time("find trigger"):
             ev_time = self.find_trigger() / 1000
         if ev_time > 0:
-            self.last_frame_start_event_time_ms = ev_time
             self.stats.count("trig ✅")
-            self.last_frame_start_cpu_time_ms = time.perf_counter() * 1000
         else:
             self.stats.count("trig ❌")
-
-        # if self.acc_cpu_ev_time_diff_ms > 1e3 / self.projector_fps:
-        #     self.stats.count_occurrence("acc > 1 frame")
-
-        # self.stats.add_metric("acc time diff [ms]", self.acc_cpu_ev_time_diff_ms)
 
     def find_trigger(self):
         """function to get the frame starts and ends from the current buffer."""
