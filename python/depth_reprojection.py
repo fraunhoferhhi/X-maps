@@ -14,7 +14,7 @@ from metavision_sdk_ui import EventLoop, BaseWindow, MTWindow, UIAction, UIKeyEv
 import numpy as np
 
 from trigger_finder import RobustTriggerFinder
-from bias_events_iterator import BiasEventsIterator
+from bias_events_iterator import BiasEventsIterator, NonBufferedBiasEventsIterator
 from stats_printer import StatsPrinter, SingleTimer
 from cam_proj_calibration import CamProjCalibration
 from x_maps_disparity import XMapsDisparity
@@ -133,6 +133,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
             # Catching up on the events on a live stream will be tricky
             # TODO implement a proper way to reset the event stream
             # TODO perf get rid of EventsIterator, use MetaEventBufferProducer directly
+            # mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=16000, bias_file=cli_params["bias"])
             mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
             cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
@@ -143,7 +144,10 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
             # Process events
             for evs in mv_iterator:
+            # while not mv_iterator.is_done():
                 with stats_printer.measure_time("main loop"):
+                    # evs = mv_iterator.get_events()
+
                     # Dispatch system events to the window
                     EventLoop.poll_and_dispatch()
 
