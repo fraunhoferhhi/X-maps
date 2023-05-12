@@ -116,6 +116,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
                 depth_map = disp_to_depth.compute_depth_map(disp_map)
 
             window.show_async(depth_map)
+            stats_printer.count("frames shown")
 
             last_frame_produced_time = time.perf_counter()
 
@@ -152,7 +153,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
             while not mv_iterator.is_done():
                 with stats_printer.measure_time("main loop"):
                     evs = mv_iterator.get_events()
-
+                    
                     # Dispatch system events to the window
                     EventLoop.poll_and_dispatch()
                     
@@ -165,9 +166,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
                     proc_time_diff_ns = time.perf_counter_ns() - start_time
                     proc_behind = proc_time_diff_ns - ev_time_diff_ns
                     
-                    stats_printer.add_time_measure_ns("ev t", ev_time_diff_ns)
-                    stats_printer.add_time_measure_ns("pr t", proc_time_diff_ns)
-                    stats_printer.add_time_measure_ns("pr b", proc_behind)
+                    stats_printer.add_time_measure_ns("(cpu t - ev[0] t)", proc_behind)
                     
                     frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / projector_fps))
                     stats_printer.add_metric("frames behind", frames_behind_i)
