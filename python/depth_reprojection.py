@@ -1,8 +1,5 @@
 # TODO if the image is disturbed (hand too close to camera?), the processing slows down a lot after
 
-# TODO think of a way to drop frames if processing is too slow - maybe keep track of time stamps vs processing time in trigger finder?
-# --> can be tested by setting delta_t to 1000 (processing gets too slow)
-
 # TODO remove EventsIterator
 
 # TODO perf reduce delta_t as much as possible to reduce latency
@@ -136,7 +133,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
             # Catching up on the events on a live stream will be tricky
             # TODO implement a proper way to reset the event stream
             # TODO perf get rid of EventsIterator, use MetaEventBufferProducer directly
-            mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
+            mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"])
             # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
             cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
