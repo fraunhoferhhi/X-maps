@@ -6,22 +6,22 @@ from typing import Callable, ClassVar, Dict, Optional
 
 
 def human_readable_time(elapsed_ns):
-    if elapsed_ns > 1e9:
+    if abs(elapsed_ns) > 1e9:
         return f"{elapsed_ns / 1e9:.2f} s"
-    elif elapsed_ns > 1e6:
+    elif abs(elapsed_ns) > 1e6:
         return f"{elapsed_ns / 1e6:.2f} ms"
-    elif elapsed_ns > 1e3:
+    elif abs(elapsed_ns) > 1e3:
         return f"{elapsed_ns / 1e3:.2f} us"
     else:
-        return f"{elapsed_ns} ns"
+        return f"{elapsed_ns:.0f} ns"
 
 
 def human_readable_qty(qty):
-    if qty > 1e9:
+    if abs(qty) > 1e9:
         return f"{qty / 1e9:.2f} G"
-    elif qty > 1e6:
+    elif abs(qty) > 1e6:
         return f"{qty / 1e6:.2f} M"
-    elif qty > 1e3:
+    elif abs(qty) > 1e3:
         return f"{qty / 1e3:.2f} k"
     else:
         return f"{qty}"
