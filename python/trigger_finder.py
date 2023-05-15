@@ -134,8 +134,7 @@ class RobustTriggerFinder:
 
         self.stats.add_metric("evs in buf", len(self.ev_buf))
 
-        with self.stats.measure_time("find trigger"):
-            ev_time = self.find_trigger() / 1000
+        ev_time = self.find_trigger() / 1000
         if ev_time > 0:
             self.stats.count("trig ✅")
         else:
