@@ -1,4 +1,5 @@
 import cv2
+import numba
 import numpy as np
 
 
@@ -41,23 +42,23 @@ def clip_normalize_uint8_depth_frame(
 @numba.jit(nopython=True, parallel=False, fastmath=True)
 def apply_white_mask(frame, norm_frame):
     height, width = norm_frame.shape
-    for i in range(height):
-        for j in range(width):
+    for i in numba.prange(height):
+        for j in numba.prange(width):
             if norm_frame[i, j] == 0:
                 frame[i, j, :] = 255
     return frame
 
 def generate_color_map(norm_frame: np.ndarray) -> None:
-    """function to apply color map to depth map"""
-    # zero depth represents no depth value, to still be able to find depth at that pixel
-    # if color map is projected, zeros are set to white (255,255,255)
-
-    # apply colormap
+    """Generate a colored visualization from the depth map"""
     frame = cv2.applyColorMap(norm_frame, cv2.COLORMAP_TURBO)
-    # set zeros to white using custom function
+
+    # zero depth represents no depth value, to still be able to find depth at that pixel
+    # at the next iteration if color map is projected back, undefined depth values are set to white
+    # to create new events
     frame = apply_white_mask(frame, norm_frame)
 
     return frame
+
 
 
 def disparity_to_depth_rectified(disparity, P1):
