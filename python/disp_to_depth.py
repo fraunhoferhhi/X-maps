@@ -38,15 +38,25 @@ def clip_normalize_uint8_depth_frame(
     return frame.astype(np.uint8)
 
 
+@numba.jit(nopython=True, parallel=False, fastmath=True)
+def apply_white_mask(frame, norm_frame):
+    height, width = norm_frame.shape
+    for i in range(height):
+        for j in range(width):
+            if norm_frame[i, j] == 0:
+                frame[i, j, :] = 255
+    return frame
+
 def generate_color_map(norm_frame: np.ndarray) -> None:
     """function to apply color map to depth map"""
     # zero depth represents no depth value, to still be able to find depth at that pixel
     # if color map is projected, zeros are set to white (255,255,255)
-    bool_map = norm_frame == 0
+
     # apply colormap
     frame = cv2.applyColorMap(norm_frame, cv2.COLORMAP_TURBO)
-    # set zeros to white according to boolean map
-    frame[bool_map, :] = 255
+    # set zeros to white using custom function
+    frame = apply_white_mask(frame, norm_frame)
+
     return frame
 
 
