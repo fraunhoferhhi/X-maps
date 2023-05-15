@@ -3,40 +3,20 @@ import numba
 import numpy as np
 
 
-def clip_depth_img(depth_img: np.ndarray, min_value: float, max_value: float):
-    """function to clip frame to min and max arguments"""
-    # as 0 depth represents no depth value, zeros must be preserved
-    # get a boolean map of all zeros
-    if min_value > 0:
-        bool_map = depth_img == 0
-    # clip values
-    np.clip(depth_img, a_min=min_value, a_max=max_value, out=depth_img)
-    # reset zeros according to boolean map
-    if min_value > 0:
-        depth_img[bool_map] = 0
+@numba.jit(nopython=True, parallel=False)
+def clip_normalize_uint8_depth_frame(depth_frame: np.ndarray, min_value: float, max_value: float) -> np.ndarray:
+    """function to clip a depth map to min and max arguments, normalize to [0,255] and change dtype to np.uint8"""
+    height, width = depth_frame.shape
+    frame = np.zeros((height, width), dtype=np.uint8)
+    for i in numba.prange(height):
+        for j in numba.prange(width):
+            val = depth_frame[i, j]
+            if val != 0:
+                val = max(min(val, max_value), min_value)
+                val = (val - min_value) / (max_value - min_value) * 255
+            frame[i, j] = np.uint8(val)
+    return frame
 
-
-def clip_normalize_uint8_depth_frame(
-    depth_frame: np.ndarray, min_value: float, max_value: float, preserve_zeros: bool = True
-) -> np.ndarray:
-    """function to clip a depth map to min and max arguments, normalize to [0,255] and cahnge dtype to np.uint8"""
-    # copy to new frame in memory
-    frame = depth_frame.copy()
-    # as 0 depth represents no depth value, zeros must be preserved
-    # get a boolean map of all zeros
-    if preserve_zeros:
-        bool_map = frame == 0
-    # clip frame to min and max values
-    clip_depth_img(frame, min_value, max_value)
-    # scale to [0,255]
-    frame -= min_value
-    frame = frame / (max_value - min_value)
-    frame *= 255
-    # reset zeros according to boolean map
-    if preserve_zeros:
-        frame[bool_map] = 0
-    # convert dtype to np.uint8
-    return frame.astype(np.uint8)
 
 
 @numba.jit(nopython=True, parallel=False, fastmath=True)
