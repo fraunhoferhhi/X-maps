@@ -130,6 +130,7 @@ class Stats:
         self.start_time_ns = time.perf_counter_ns()
 
 
+@dataclass
 class StatsPrinter:
     """Utility class to print statistics about the execution of the code.
 
@@ -139,13 +140,11 @@ class StatsPrinter:
     every `print_every_ms` milliseconds, otherwise return early.
     """
 
-    def __init__(self, print_every_ms=1000):
-        self.print_every_ms = print_every_ms
+    print_every_ms: int = 1000
 
-        self.have_printed = False
-
-        self.local_stats = Stats()
-        self.global_stats = Stats()
+    have_printed: bool = False
+    local_stats: Stats = Stats()
+    global_stats: Stats = Stats()
 
     def count(self, key, qty=1):
         """Count occurrences of a certain type (e.g. "trigger found")"""
