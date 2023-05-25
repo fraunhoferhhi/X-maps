@@ -69,18 +69,9 @@ class NonBufferedBiasEventsIterator:
                 print("No live camera found! Exiting...")
                 sys.exit(1)
 
-            # if bias file is provided, load file and set biases in live camera device
             if bias_file:
-                biases = Biases(load_bias_file(bias_file))
-                for bias in biases.biases:
-                    device.get_i_ll_biases().set(bias, biases.biases[bias])
-            # if not bias file is provided, the camera uses the default biases
-            # to use these biases, a default biases class is created, which initiates with default biases
-            else:
-                biases = Biases()
-            if not device:
-                print("No live camera found.")
-                sys.exit(1)
+                for bias_k, bias_v in Biases(load_bias_file(bias_file)).biases.items():
+                    device.get_i_ll_biases().set(bias_k, bias_v)
 
             # # Start the camera
             # device.get_i_device_control().start()
