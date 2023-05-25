@@ -1,0 +1,28 @@
+name: base
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - black
+  - click
+  - fire
+  - funcy
+  - h5py
+  - ipython
+  - jupyter
+  - matplotlib
+  - numba
+  - numpy
+  - opencv
+  # - opend3d
+  - pandas
+  # - pip
+  # - pylops==1.18.3
+  - pyntcloud
+  - pyyaml
+  - scikit-video
+  - scipy
+  - seaborn
+  - tk
+

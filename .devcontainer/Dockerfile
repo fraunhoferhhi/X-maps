@@ -1,6 +1,8 @@
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.231.6/containers/ubuntu/.devcontainer/base.Dockerfile
 
-FROM ubuntu:focal
+FROM mambaorg/micromamba:1.4-focal
+
+USER root
 
 # set timezone
 ENV TZ=Europe/Berlin
@@ -10,6 +12,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 COPY ./metavision.list /tmp/metavision.list
 # check on a temporary copy, because we don't have ca-certificates yet, and apt-get update would fail
 RUN grep -q '^[^#]' /tmp/metavision.list || (echo "ERROR: metavision.list is empty. Add Metavision SDK repository URL to .devcontainer/metavision.list!" && exit 1)
+
+USER root
 
 # intalling basic tools
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
@@ -28,31 +32,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     wget \
     -y
 
-# install python3 and packages
-# pylops API changes rapidly, 1.18.3 seems to have the one that is used in ESL code
-RUN DEBIAN_FRONTEND=noninteractive apt -y install python3-pip python3-tk && \
-    DEBIAN_FRONTEND=noninteractive python3 -m pip install pip --upgrade && \
-    DEBIAN_FRONTEND=noninteractive python3 -m pip install \
-    black \
-    click \
-    fire \
-    funcy \
-    h5py \
-    ipython \
-    jupyter \
-    matplotlib \
-    numba \
-    numpy \
-    open3d \
-    opencv-python \
-    pandas \
-    pylops==1.18.3 \
-    pyntcloud \
-    pyyaml \
-    scikit-video \
-    scipy \
-    seaborn
-
 # installing MetavisionSDK
 COPY ./metavision.list /etc/apt/sources.list.d/metavision.list
 
@@ -63,9 +42,16 @@ RUN export LC_ALL=en_US.UTF-8
 RUN export LANG=en_US.UTF-8
 RUN locale-gen en_US.UTF-8
 
-# adding user with UID/GID 1001 and add user to sudo
+USER $MAMBA_USER
+
+COPY --chown=$MAMBA_USER:$MAMBA_USER environment.yaml /tmp/env.yaml
+RUN micromamba install -y -n base -f /tmp/env.yaml && \
+    micromamba clean --all --yes
+
+USER root
+
 ARG USER="vscode"
-ARG USER_UID=1000
+ARG USER_UID=1001
 ARG USER_GID=${USER_UID}
 
 RUN DEBIAN_FRONTEND=noninteractive groupadd --gid ${USER_GID} ${USER} && \
