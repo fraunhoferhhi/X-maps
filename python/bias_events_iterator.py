@@ -65,6 +65,11 @@ class NonBufferedBiasEventsIterator:
         if self.__is_live:
             # create live camera device interface
             device = mv_hal.DeviceDiscovery.open("")
+            
+            if not device:
+                print("No live camera found! Exiting...")
+                sys.exit(1)
+            
             # if bias file is provided, load file and set biases in live camera device
             if bias_file:
                 biases = Biases(load_bias_file(bias_file))
