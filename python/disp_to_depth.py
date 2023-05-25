@@ -3,7 +3,7 @@ import numba
 import numpy as np
 
 
-@numba.jit(nopython=True, parallel=False)
+@numba.jit(nopython=True, parallel=False, cache=True)
 def clip_normalize_uint8_depth_frame(depth_frame: np.ndarray, min_value: float, max_value: float) -> np.ndarray:
     """function to clip a depth map to min and max arguments, normalize to [0,255] and change dtype to np.uint8"""
     height, width = depth_frame.shape
@@ -18,7 +18,7 @@ def clip_normalize_uint8_depth_frame(depth_frame: np.ndarray, min_value: float, 
     return frame
 
 
-@numba.jit(nopython=True, parallel=False, fastmath=True)
+@numba.jit(nopython=True, parallel=False, fastmath=True, cache=True)
 def apply_white_mask(frame, norm_frame):
     height, width = norm_frame.shape
     for i in numba.prange(height):
