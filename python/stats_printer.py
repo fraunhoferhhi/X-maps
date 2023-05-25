@@ -30,64 +30,66 @@ def human_readable_qty(qty):
             return f"{qty:6d} "
         else:
             return f"{qty:6.2f} "
-    
+
+
 def human_readable_qty_per_second(qty, elapsed_ns):
     return f"{human_readable_qty(qty * 1e9 / elapsed_ns)}"
+
 
 @dataclass
 class Occurences:
     occurences: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
-    
+
     def count(self, name: str, qty: int = 1):
         self.occurences[name] += qty
-        
+
     def print_total(self):
         print("total count ", end="")
         for name, occ in sorted(self.occurences.items()):
             print(f"#{name}: {human_readable_qty(occ)} | ", end="")
         print()
-        
+
     def print_avg(self, elapsed_ns):
         print("avg per sec ", end="")
         for name, occ in sorted(self.occurences.items()):
             print(f"#{name}: {human_readable_qty_per_second(occ, elapsed_ns)} | ", end="")
         print()
-        
+
     def reset(self):
         for name in self.occurences.keys():
             self.occurences[name] = 0
-            
+
     def __getitem__(self, name):
         return self.occurences[name]
-        
+
+
 @dataclass
 class Quantities:
     qties: Dict[str, float] = field(default_factory=lambda: defaultdict(float))
     qty_counter: Occurences = field(default_factory=Occurences)
     fmt: Callable[[float], str] = field(default_factory=lambda: human_readable_qty)
-    
+
     def add(self, name: str, qty: float):
         self.qties[name] += qty
         self.qty_counter.count(name)
-    
+
     def print_avg(self):
         print("avg ", end="")
         for name, qty in sorted(self.qties.items()):
             count = max(self.qty_counter[name], 1)
             print(f"{name}: {self.fmt(qty / count)} | ", end="")
         print()
-    
+
     def reset(self):
         for name in self.qties.keys():
             self.qties[name] = 0
         self.qty_counter.reset()
-                
-        
+
+
 @dataclass
 class TimeMeasures(Quantities):
     fmt: Callable[[float], str] = field(default_factory=lambda: human_readable_time)
-    
-    
+
 
 @dataclass
 class Stats:
@@ -96,38 +98,37 @@ class Stats:
     time_measures: TimeMeasures = field(default_factory=TimeMeasures)
     timers: Dict[str, "StatsTimer"] = field(default_factory=dict)
     start_time_ns: int = field(default_factory=lambda: time.perf_counter_ns())
-    
+
     def count(self, name: str, qty: int):
         self.occurences.count(name, qty)
-        
+
     def add(self, name: str, qty: float):
         self.qties.add(name, qty)
-        
+
     def add_time_measure_ns(self, name: str, elapsed_ns: float):
         self.time_measures.add(name, elapsed_ns)
-        
+
     def elapsed_ns(self):
         return time.perf_counter_ns() - self.start_time_ns
-        
+
     def print_total_occurrences(self):
-        self.occurences.print_total() 
-    
+        self.occurences.print_total()
+
     def print_avg_occurrences(self, elapsed_ns):
         self.occurences.print_avg(elapsed_ns)
-        
+
     def print_avg_qties(self):
         self.qties.print_avg()
-        
+
     def print_avg_time_measures(self):
         self.time_measures.print_avg()
-        
+
     def reset(self):
         self.occurences.reset()
         self.qties.reset()
         self.time_measures.reset()
         self.start_time_ns = time.perf_counter_ns()
 
-    
 
 class StatsPrinter:
     """Utility class to print statistics about the execution of the code.
@@ -145,8 +146,7 @@ class StatsPrinter:
 
         self.local_stats = Stats()
         self.global_stats = Stats()
-        
-       
+
     def count(self, key, qty=1):
         """Count occurrences of a certain type (e.g. "trigger found")"""
         self.local_stats.count(key, qty)
@@ -163,7 +163,7 @@ class StatsPrinter:
                      do_something()
         """
         return StatsTimer(stats_printer=self, key=key)
-    
+
     def add_time_measure_ns(self, key, elapsed_ns):
         self.local_stats.add_time_measure_ns(key, elapsed_ns)
         self.global_stats.add_time_measure_ns(key, elapsed_ns)
@@ -176,26 +176,27 @@ class StatsPrinter:
         self.local_stats.reset()
         self.global_stats.reset()
 
-    
     def print_stats(self):
-        
         if self.have_printed:
             # Move cursor up by 11 lines
-            print("\033[11A", end='')
+            print("\033[11A", end="")
             # Clear the screen from cursor to end
-            print("\033[J", end='')
+            print("\033[J", end="")
 
         red = "\033[31m"
         green = "\033[32m"
         blue = "\033[34m"
         magenta = "\033[35m"
         reset_color = "\033[0m"
-        
+
         local_avg_color = green
         global_avg_color = blue
         global_tot_color = red
 
-        print(f"{local_avg_color}Local stats over  {human_readable_time(self.local_stats.elapsed_ns())} {reset_color}- ", end="")
+        print(
+            f"{local_avg_color}Local stats over  {human_readable_time(self.local_stats.elapsed_ns())} {reset_color}- ",
+            end="",
+        )
         print(f"{global_avg_color}global stats over {human_readable_time(self.global_stats.elapsed_ns())}")
 
         print()
@@ -205,23 +206,23 @@ class StatsPrinter:
         self.global_stats.print_avg_occurrences(self.global_stats.elapsed_ns())
         print(f"{global_tot_color}", end="")
         self.global_stats.print_total_occurrences()
-        
+
         print()
         print(f"{local_avg_color}", end="")
         self.local_stats.print_avg_qties()
         print(f"{global_avg_color}", end="")
         self.global_stats.print_avg_qties()
-        
+
         print()
         print(f"{local_avg_color}", end="")
         self.local_stats.print_avg_time_measures()
         print(f"{global_avg_color}", end="")
         self.global_stats.print_avg_time_measures()
-        
+
         self.local_stats.reset()
-        
+
         self.last_print_time = time.perf_counter_ns()
-        
+
         self.have_printed = True
 
 
@@ -253,21 +254,21 @@ class SingleTimer:
     message: str
     start_time: int = field(init=False)
     started: bool = False
-    
+
     def start(self):
         if self.started:
             raise Exception("Timer already started")
         self.start_time = time.perf_counter_ns()
         self.started = True
         return self
-        
+
     def stop(self):
         if not self.started:
             raise Exception("Timer not started")
         self.elapsed_time_ns = time.perf_counter_ns() - self.start_time
         print(f"{self.message}: {human_readable_time(self.elapsed_time_ns)}")
         self.started = False
-        
+
     def is_running(self):
         return self.started
 
@@ -284,4 +285,3 @@ class SingleTimer:
     def __exit__(self, *exc_info):
         self.stop()
         return False
-

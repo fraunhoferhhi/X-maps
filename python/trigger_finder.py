@@ -148,7 +148,7 @@ class RobustTriggerFinder:
         # perf: is this recomputed a lot? - no, not at all, usually there's a whole frame worth of events here, so it is not
         with self.stats.measure_time("find pauses"):
             frame_paused_ev_idx = np.nonzero(np.diff(self.ev_buf["t"]) >= self.frame_paused_thresh_us)[0]
-        
+
         # offline: avg 4
         # online: avg 2
         # self.stats.add_metric("frame pauses", len(frame_paused_ev_idx))

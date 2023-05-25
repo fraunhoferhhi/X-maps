@@ -50,7 +50,6 @@ class BiasEventsIterator:
         return self.__ev_it.get_size()
 
 
-
 class NonBufferedBiasEventsIterator:
     def __init__(self, delta_t, input_filename, bias_file=None):
         # Check validity of input arguments and choose is live camera, .raw file or .dat file
@@ -65,11 +64,11 @@ class NonBufferedBiasEventsIterator:
         if self.__is_live:
             # create live camera device interface
             device = mv_hal.DeviceDiscovery.open("")
-            
+
             if not device:
                 print("No live camera found! Exiting...")
                 sys.exit(1)
-            
+
             # if bias file is provided, load file and set biases in live camera device
             if bias_file:
                 biases = Biases(load_bias_file(bias_file))
@@ -98,7 +97,7 @@ class NonBufferedBiasEventsIterator:
     def __iter__(self):
         while not self.reader.is_done():
             yield self.reader.load_delta_t(-1)
-    
+
     def is_done(self):
         return self.reader.is_done()
 

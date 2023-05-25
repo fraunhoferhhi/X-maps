@@ -18,7 +18,6 @@ def clip_normalize_uint8_depth_frame(depth_frame: np.ndarray, min_value: float, 
     return frame
 
 
-
 @numba.jit(nopython=True, parallel=False, fastmath=True)
 def apply_white_mask(frame, norm_frame):
     height, width = norm_frame.shape
@@ -27,6 +26,7 @@ def apply_white_mask(frame, norm_frame):
             if norm_frame[i, j] == 0:
                 frame[i, j, :] = 255
     return frame
+
 
 def generate_color_map(norm_frame: np.ndarray) -> None:
     """Generate a colored visualization from the depth map"""
@@ -38,7 +38,6 @@ def generate_color_map(norm_frame: np.ndarray) -> None:
     frame = apply_white_mask(frame, norm_frame)
 
     return frame
-
 
 
 def disparity_to_depth_rectified(disparity, P1):
@@ -80,10 +79,13 @@ class DisparityToDepth:
         # change of depth during the rotation back from the rectified coordinate system to the
         # unrectified coordinate system.
         with self.stats.measure_time("d2d_rect"):
-
             depth_map_f32 = disparity_to_depth_rectified(
                 cv2.remap(
-                    disp_map, self.calib.disp_proj_mapx, self.calib.disp_proj_mapy, cv2.INTER_NEAREST, cv2.BORDER_CONSTANT
+                    disp_map,
+                    self.calib.disp_proj_mapx,
+                    self.calib.disp_proj_mapy,
+                    cv2.INTER_NEAREST,
+                    cv2.BORDER_CONSTANT,
                 ),
                 self.calib.P2,
             )
