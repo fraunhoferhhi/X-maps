@@ -17,12 +17,39 @@ from disp_to_depth import DisparityToDepth
 import click
 import sys
 import time
+from dataclasses import dataclass
 
 
 
 def generate_frame(evs, frame):
     frame[:, :] = 0
     frame[evs["y"], evs["x"]] = 255
+
+@dataclass
+class DepthReprojectionPipe:
+    
+    camera_width: int
+    camera_height: int
+    
+    projector_width: int
+    projector_height: int
+    
+    x_maps_disp: XMapsDisparity = None
+    disp_to_depth: DisparityToDepth = None
+    stats_printer: StatsPrinter = StatsPrinter()
+    
+    def setup(self, cli_params):
+        with SingleTimer("Setting up calibration"):
+            calib_obj = CamProjCalibration(cli_params["calib"], self.camera_width, self.camera_height, self.projector_width, self.projector_height)
+
+        with SingleTimer("Setting up projector time map"):
+            proj_time_map = ProjectorTimeMap(calib_obj, cli_params["projector_time_map"])
+
+        with SingleTimer("Setting up projector X-map"):
+            self.x_maps_disp = XMapsDisparity(calib_obj, proj_time_map, self.projector_width)
+
+        with SingleTimer("Setting up disparity to depth"):
+            self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_obj, cli_params["z_near"], cli_params["z_far"])
 
 
 @click.command()
@@ -75,26 +102,15 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
     should_drop_frames = not cli_params["no_frame_dropping"]
 
-    stats_printer = StatsPrinter()
-
-    with SingleTimer("Setting up calibration"):
-        calib_obj = CamProjCalibration(cli_params["calib"], camera_width, camera_height, projector_width, projector_height)
-
-    with SingleTimer("Setting up projector time map"):
-        proj_time_map = ProjectorTimeMap(calib_obj, cli_params["projector_time_map"])
-
-    with SingleTimer("Setting up projector X-map"):
-        x_maps_disp = XMapsDisparity(calib_obj, proj_time_map, projector_width)
-
-    with SingleTimer("Setting up disparity to depth"):
-        disp_to_depth = DisparityToDepth(stats_printer, calib_obj, cli_params["z_near"], cli_params["z_far"])
+    pipe = DepthReprojectionPipe(camera_width, camera_height, projector_width, projector_height)
+    pipe.setup(cli_params)
 
     # Window - Graphical User Interface (Display filtered events and process keyboard events)
     with MTWindow(
         title="X Maps Depth", width=projector_width, height=projector_height, mode=BaseWindow.RenderMode.BGR
     ) as window:
         
-        stats_printer.reset()
+        pipe.stats_printer.reset()
 
         def on_frame_evs(evs):
             """Callback from the trigger finder, evs contain the events of the current frame"""
@@ -103,18 +119,18 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
             nonlocal last_frame_produced_time
 
-            with stats_printer.measure_time("x-maps disp"):
-                point_cloud, disp_map = x_maps_disp.compute_event_disparity(evs)
+            with pipe.stats_printer.measure_time("x-maps disp"):
+                point_cloud, disp_map = pipe.x_maps_disp.compute_event_disparity(evs)
 
-            with stats_printer.measure_time("disp2depth"):
-                depth_map = disp_to_depth.compute_depth_map(disp_map)
+            with pipe.stats_printer.measure_time("disp2depth"):
+                depth_map = pipe.disp_to_depth.compute_depth_map(disp_map)
 
             window.show_async(depth_map)
-            stats_printer.count("frames shown")
+            pipe.stats_printer.count("frames shown")
 
             last_frame_produced_time = time.perf_counter()
 
-        trigger_finder = RobustTriggerFinder(projector_fps=projector_fps, stats=stats_printer, callback=on_frame_evs)
+        trigger_finder = RobustTriggerFinder(projector_fps=projector_fps, stats=pipe.stats_printer, callback=on_frame_evs)
 
         def keyboard_cb(key, scancode, action, mods):
             if action != UIAction.RELEASE:
@@ -137,7 +153,7 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
         start_time = time.perf_counter_ns()
 
         for evs in mv_iterator:
-            with stats_printer.measure_time("main loop"):
+            with pipe.stats_printer.measure_time("main loop"):
                 
                 # Dispatch system events to the window
                 EventLoop.poll_and_dispatch()
@@ -149,28 +165,28 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
                 proc_time_diff_ns = time.perf_counter_ns() - start_time
                 proc_behind = proc_time_diff_ns - ev_time_diff_ns
                 
-                stats_printer.add_time_measure_ns("(cpu t - ev[0] t)", proc_behind)
+                pipe.stats_printer.add_time_measure_ns("(cpu t - ev[0] t)", proc_behind)
                 
                 frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / projector_fps))
-                stats_printer.add_metric("frames behind", frames_behind_i)
+                pipe.stats_printer.add_metric("frames behind", frames_behind_i)
                 if frames_behind_i > 0 and should_drop_frames:
                     trigger_finder.drop_frame()
 
-                stats_printer.print_stats_if_needed()
-                stats_printer.count("processed evs", len(evs))
+                pipe.stats_printer.print_stats_if_needed()
+                pipe.stats_printer.count("processed evs", len(evs))
 
                 pos_filter.process_events(evs, pos_events_buf)
                 act_filter.process_events(pos_events_buf, act_events_buf)
 
                 trigger_finder.process_events(act_events_buf)
                 
-                stats_printer.print_stats_if_needed()
+                pipe.stats_printer.print_stats_if_needed()
 
                 if window.should_close():
-                    stats_printer.print_stats()
+                    pipe.stats_printer.print_stats()
                     sys.exit(0)
 
-        stats_printer.print_stats()        
+        pipe.stats_printer.print_stats()        
 
 
 if __name__ == "__main__":
