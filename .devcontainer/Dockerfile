@@ -1,15 +1,15 @@
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.231.6/containers/ubuntu/.devcontainer/base.Dockerfile
 
-FROM nvidia/cuda:11.4.0-devel-ubuntu20.04
+FROM ubuntu:focal
 
 # set timezone
 ENV TZ=Europe/Berlin
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # ./metavision.list is not included in the repository, you need to manually create .devcontainer/metavision.list from metavision.list.template
-COPY ./metavision.list /etc/apt/sources.list.d/metavision.list
-
-RUN grep -q '^[^#]' /etc/apt/sources.list.d/metavision.list || (echo "ERROR: metavision.list is empty. Add Metavision SDK repository URL to .devcontainer/metavision.list!" && exit 1)
+COPY ./metavision.list /tmp/metavision.list
+# check on a temporary copy, because we don't have ca-certificates yet, and apt-get update would fail
+RUN grep -q '^[^#]' /tmp/metavision.list || (echo "ERROR: metavision.list is empty. Add Metavision SDK repository URL to .devcontainer/metavision.list!" && exit 1)
 
 # intalling basic tools
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
@@ -35,7 +35,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt -y install python3-pip python3-tk && \
     DEBIAN_FRONTEND=noninteractive python3 -m pip install \
     black \
     click \
-    cupy-cuda114 \
     fire \
     funcy \
     h5py \
@@ -55,7 +54,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt -y install python3-pip python3-tk && \
     seaborn
 
 # installing MetavisionSDK
-# RUN DEBIAN_FRONTEND=noninteractive echo 'deb [arch=amd64 trusted=yes] https://apt.prophesee.ai/dists/public/wohr2Cho/ubuntu focal sdk\n' >> /etc/apt/sources.list.d/metavision.list && \
+COPY ./metavision.list /etc/apt/sources.list.d/metavision.list
+
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install 'metavision-*' -y
 
