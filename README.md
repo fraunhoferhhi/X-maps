@@ -61,9 +61,10 @@ The project is configured to run from a Docker image in Visual Studio Code (VS C
    git clone git@github.com:fraunhoferhhi/X-maps.git
    ```
 2. Open X-maps folder in VS Code
-3. Copy `.devcontainer/metavision.list.template` to `.devcontainer/metavision.list`
-4. Edit `.devcontainer/metavision.list` to fill in the URL to the Ubuntu 20.04 Metavision SDK
-4. *Reopen in Container* in VS Code
+3. Install the extensions recommended by VS Code (*Docker* and *Dev Containers*)
+4. Copy `.devcontainer/metavision.list.template` to `.devcontainer/metavision.list`
+5. Edit `.devcontainer/metavision.list` to fill in the URL to the Ubuntu 20.04 Metavision SDK
+6. *Reopen in Container* in VS Code
 
 <!-- <p align="right">(<a href="#readme-top">back to top</a>)</p> -->
 
