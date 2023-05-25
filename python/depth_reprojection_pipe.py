@@ -133,8 +133,6 @@ class DepthReprojectionPipe:
         )
         self.window.set_keyboard_callback(self.keyboard_cb)
 
-        self.stats_printer.reset()
-
         return self
 
     def __exit__(self, *exc_info):
@@ -151,6 +149,7 @@ class DepthReprojectionPipe:
         if self.first_event_time_us == -1:
             self.first_event_time_us = evs["t"][0]
             self.start_time = time.perf_counter_ns()
+            self.stats_printer.reset()
 
         ev_time_diff_ns = (evs["t"][0] - self.first_event_time_us) * 1000
         proc_time_diff_ns = time.perf_counter_ns() - self.start_time
