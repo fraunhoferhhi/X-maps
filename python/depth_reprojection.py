@@ -1,7 +1,7 @@
 from metavision_sdk_ui import EventLoop
 
 from bias_events_iterator import BiasEventsIterator, NonBufferedBiasEventsIterator
-from depth_reprojection_pipe import DepthReprojectionPipe
+from depth_reprojection_pipe import DepthReprojectionPipe, RuntimeParams
 
 import click
 import sys
@@ -32,7 +32,7 @@ import sys
 @click.option(
     "--no-frame-dropping", help="Process all events, even when processing lags behind the event stream", is_flag=True
 )
-def main(projector_width, projector_height, projector_fps, **cli_params):
+def main(bias, input, loop_input, **cli_params):
     print("Code sample showing how to create a simple application testing different noise filtering strategies.")
     print(
         "Available keyboard options:\n"
@@ -44,42 +44,28 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
     )
 
     # TODO remove these static values, retrieve from event stream
-    camera_width = 640
-    camera_height = 480
+    params = RuntimeParams(camera_width=640, camera_height=480, **cli_params)
 
-    should_drop_frames = not cli_params["no_frame_dropping"]
+    with DepthReprojectionPipe(params) as pipe:
+        mv_iterator = NonBufferedBiasEventsIterator(input_filename=input, delta_t=4000, bias_file=bias)
+        # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
+        cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
-    pipe = DepthReprojectionPipe(
-        camera_width, camera_height, projector_width, projector_height, projector_fps, should_drop_frames
-    )
-    pipe.setup(cli_params)
+        assert cam_height_reader == params.camera_height
+        assert cam_width_reader == params.camera_width
 
-    pipe.stats_printer.reset()
+        for evs in mv_iterator:
+            with pipe.stats_printer.measure_time("main loop"):
+                # Dispatch system events to the window
+                EventLoop.poll_and_dispatch()
 
-    mv_iterator = NonBufferedBiasEventsIterator(
-        input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"]
-    )
-    # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
-    cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
+                if not len(evs):
+                    continue
 
-    assert cam_height_reader == camera_height
-    assert cam_width_reader == camera_width
+                pipe.process_events(evs)
 
-    for evs in mv_iterator:
-        with pipe.stats_printer.measure_time("main loop"):
-            # Dispatch system events to the window
-            EventLoop.poll_and_dispatch()
-
-            if not len(evs):
-                continue
-
-            pipe.process_events(evs)
-
-            if pipe.should_close():
-                pipe.stats_printer.print_stats()
-                sys.exit(0)
-
-    pipe.stats_printer.print_stats()
+                if pipe.should_close():
+                    sys.exit(0)
 
 
 if __name__ == "__main__":

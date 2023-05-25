@@ -1,3 +1,4 @@
+from typing import Any
 from metavision_sdk_core import PolarityFilterAlgorithm
 from metavision_sdk_cv import ActivityNoiseFilterAlgorithm
 from metavision_sdk_ui import BaseWindow, MTWindow, UIAction, UIKeyEvent
@@ -14,7 +15,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class DepthReprojectionPipe:
+class RuntimeParams:
     camera_width: int
     camera_height: int
 
@@ -23,7 +24,23 @@ class DepthReprojectionPipe:
 
     projector_fps: int
 
-    should_drop_frames: bool
+    z_near: float
+    z_far: float
+
+    calib: str
+
+    projector_time_map: str
+
+    no_frame_dropping: bool
+
+    @property
+    def should_drop_frames(self):
+        return not self.no_frame_dropping
+
+
+@dataclass
+class DepthReprojectionPipe:
+    params: RuntimeParams
 
     first_event_time_us: int = -1
     start_time: int = -1
@@ -41,6 +58,26 @@ class DepthReprojectionPipe:
     x_maps_disp: XMapsDisparity = None
     disp_to_depth: DisparityToDepth = None
     stats_printer: StatsPrinter = StatsPrinter()
+
+    @property
+    def camera_width(self):
+        return self.params.camera_width
+
+    @property
+    def camera_height(self):
+        return self.params.camera_height
+
+    @property
+    def projector_width(self):
+        return self.params.projector_width
+
+    @property
+    def projector_height(self):
+        return self.params.projector_height
+
+    @property
+    def projector_fps(self):
+        return self.params.projector_fps
 
     @property
     def activity_time_ths(self):
@@ -63,7 +100,7 @@ class DepthReprojectionPipe:
         self.window.show_async(depth_map)
         self.stats_printer.count("frames shown")
 
-    def setup(self, cli_params):
+    def __enter__(self):
         self.act_filter = ActivityNoiseFilterAlgorithm(self.camera_width, self.camera_height, self.activity_time_ths)
 
         self.pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
@@ -75,19 +112,17 @@ class DepthReprojectionPipe:
 
         with SingleTimer("Setting up calibration"):
             calib_obj = CamProjCalibration(
-                cli_params["calib"], self.camera_width, self.camera_height, self.projector_width, self.projector_height
+                self.params.calib, self.camera_width, self.camera_height, self.projector_width, self.projector_height
             )
 
         with SingleTimer("Setting up projector time map"):
-            proj_time_map = ProjectorTimeMap(calib_obj, cli_params["projector_time_map"])
+            proj_time_map = ProjectorTimeMap(calib_obj, self.params.projector_time_map)
 
         with SingleTimer("Setting up projector X-map"):
             self.x_maps_disp = XMapsDisparity(calib_obj, proj_time_map, self.projector_width)
 
         with SingleTimer("Setting up disparity to depth"):
-            self.disp_to_depth = DisparityToDepth(
-                self.stats_printer, calib_obj, cli_params["z_near"], cli_params["z_far"]
-            )
+            self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_obj, self.params.z_near, self.params.z_far)
 
         self.window = MTWindow(
             title="X Maps Depth",
@@ -97,6 +132,14 @@ class DepthReprojectionPipe:
             open_directly=True,
         )
         self.window.set_keyboard_callback(self.keyboard_cb)
+
+        self.stats_printer.reset()
+
+        return self
+
+    def __exit__(self, *exc_info):
+        self.stats_printer.print_stats()
+        return False
 
     def keyboard_cb(self, key, scancode, action, mods):
         if action != UIAction.RELEASE:
@@ -117,7 +160,7 @@ class DepthReprojectionPipe:
 
         frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / self.projector_fps))
         self.stats_printer.add_metric("frames behind", frames_behind_i)
-        if frames_behind_i > 0 and self.should_drop_frames:
+        if frames_behind_i > 0 and self.params.should_drop_frames:
             self.trigger_finder.drop_frame()
 
         self.stats_printer.print_stats_if_needed()
