@@ -1,6 +1,6 @@
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.231.6/containers/ubuntu/.devcontainer/base.Dockerfile
 
-FROM mambaorg/micromamba:1.4-focal
+FROM mambaorg/micromamba:1.4-jammy
 
 USER root
 
@@ -19,7 +19,7 @@ USER root
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
     DEBIAN_FRONTEND=noninteractive apt autoremove -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ca-certificates \
     git \
     gpg \
@@ -29,14 +29,37 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     parallel \
     sudo \
     unzip \
-    wget \
-    -y
+    wget
+
+# X Error of failed request:  BadShmSeg (invalid shared segment parameter) on Jammy
+# https://github.com/RobotLocomotion/drake/issues/18726
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
+    xvfb \
+    libegl1 \
+    libegl-mesa0=22.0.1-1ubuntu2 \
+    libgbm1=22.0.1-1ubuntu2 \
+    libgl1-mesa-dri=22.0.1-1ubuntu2 \
+    libglapi-mesa=22.0.1-1ubuntu2 \
+    libglx-mesa0=22.0.1-1ubuntu2
+
+RUN DEBIAN_FRONTEND=noninteractive apt-mark hold \
+    libegl-mesa0 \
+    libgbm1 \
+    libgl1-mesa-dri \
+    libglapi-mesa \
+    libglx-mesa0
 
 # installing MetavisionSDK
 COPY ./metavision.list /etc/apt/sources.list.d/metavision.list
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install 'metavision-*' -y
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    metavision-hal-bin \
+    metavision-hal-prophesee-plugins \
+    metavision-sdk-core-bin \
+    metavision-sdk-core-python \
+    metavision-sdk-core-python3.10 \
+    metavision-sdk-python3.10
 
 RUN export LC_ALL=en_US.UTF-8
 RUN export LANG=en_US.UTF-8
