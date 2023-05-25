@@ -143,6 +143,9 @@ class StatsPrinter:
     print_every_ms: int = 1000
 
     have_printed: bool = False
+
+    should_print: bool = True
+
     local_stats: Stats = Stats()
     global_stats: Stats = Stats()
 
@@ -171,11 +174,17 @@ class StatsPrinter:
         if self.local_stats.elapsed_ns() >= self.print_every_ms * 1e6:
             self.print_stats()
 
+    def toggle_silence(self):
+        self.should_print = not self.should_print
+
     def reset(self):
         self.local_stats.reset()
         self.global_stats.reset()
 
     def print_stats(self):
+        if not self.should_print:
+            return
+
         if self.have_printed:
             # Move cursor up by 11 lines
             print("\033[11A", end="")

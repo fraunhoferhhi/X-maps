@@ -144,6 +144,8 @@ class DepthReprojectionPipe:
             return
         if key == UIKeyEvent.KEY_ESCAPE or key == UIKeyEvent.KEY_Q:
             self.window.set_close_flag()
+        if key == UIKeyEvent.KEY_S:
+            self.stats_printer.toggle_silence()
 
     def process_events(self, evs):
         if self.first_event_time_us == -1:

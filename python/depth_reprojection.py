@@ -34,14 +34,7 @@ import sys
 )
 def main(bias, input, loop_input, **cli_params):
     print("Code sample showing how to create a simple application testing different noise filtering strategies.")
-    print(
-        "Available keyboard options:\n"
-        "  - A: Filter events using the activity noise filter algorithm\n"
-        "  - T: Filter events using the trail filter algorithm\n"
-        "  - S: Filter events using the spatio temporal contrast algorithm\n"
-        "  - E: Show all events\n"
-        "  - Q/Escape: Quit the application\n"
-    )
+    print("Available keyboard options:\n" "   - S: Toggle printing statistics\n" "  - Q/Escape: Quit the application\n")
 
     # TODO remove these static values, retrieve from event stream
     params = RuntimeParams(camera_width=640, camera_height=480, **cli_params)
