@@ -124,74 +124,53 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
 
         window.set_keyboard_callback(keyboard_cb)
 
-        def main_loop():
-            nonlocal last_frame_produced_time
-            mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"])
-            # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
-            cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
+        mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"])
+        # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
+        cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
-            last_frame_produced_time = -1
+        last_frame_produced_time = -1
 
-            assert cam_height_reader == camera_height
-            assert cam_width_reader == camera_width
+        assert cam_height_reader == camera_height
+        assert cam_width_reader == camera_width
 
-            first_event_time_us = -1
-            start_time = time.perf_counter_ns()
+        first_event_time_us = -1
+        start_time = time.perf_counter_ns()
 
-            # Process events
-            for evs in mv_iterator:
-                with stats_printer.measure_time("main loop"):
-                    
-                    # Dispatch system events to the window
-                    EventLoop.poll_and_dispatch()
-                    
-                    if not len(evs):
-                        continue
-                    
-                    if first_event_time_us == -1:
-                        first_event_time_us = evs["t"][0]
-                        print(f"first event time: {first_event_time_us}")
-                        print("")
-                        
-                    ev_time_diff_ns = (evs["t"][0] - first_event_time_us) * 1000
-                    proc_time_diff_ns = time.perf_counter_ns() - start_time
-                    proc_behind = proc_time_diff_ns - ev_time_diff_ns
-                    
-                    stats_printer.add_time_measure_ns("(cpu t - ev[0] t)", proc_behind)
-                    
-                    frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / projector_fps))
-                    stats_printer.add_metric("frames behind", frames_behind_i)
-                    if frames_behind_i > 0 and should_drop_frames:
-                        trigger_finder.drop_frame()
+        for evs in mv_iterator:
+            with stats_printer.measure_time("main loop"):
+                
+                # Dispatch system events to the window
+                EventLoop.poll_and_dispatch()
+                
+                if not len(evs):
+                    continue
+                
+                ev_time_diff_ns = (evs["t"][0] - first_event_time_us) * 1000
+                proc_time_diff_ns = time.perf_counter_ns() - start_time
+                proc_behind = proc_time_diff_ns - ev_time_diff_ns
+                
+                stats_printer.add_time_measure_ns("(cpu t - ev[0] t)", proc_behind)
+                
+                frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / projector_fps))
+                stats_printer.add_metric("frames behind", frames_behind_i)
+                if frames_behind_i > 0 and should_drop_frames:
+                    trigger_finder.drop_frame()
 
-                    stats_printer.print_stats_if_needed()
-                    stats_printer.count("processed evs", len(evs))
+                stats_printer.print_stats_if_needed()
+                stats_printer.count("processed evs", len(evs))
 
-                    pos_filter.process_events(evs, pos_events_buf)
-                    act_filter.process_events(pos_events_buf, act_events_buf)
+                pos_filter.process_events(evs, pos_events_buf)
+                act_filter.process_events(pos_events_buf, act_events_buf)
 
-                    time_since_last_finished_frame_ms = (time.perf_counter() - last_frame_produced_time) * 1000
+                trigger_finder.process_events(act_events_buf)
+                
+                stats_printer.print_stats_if_needed()
 
-                    # if last_frame_produced_time != -1 and time_since_last_finished_frame_ms > 13:
-                    #     print("")
-                    #     print(f"time since last frame: {time_since_last_finished_frame_ms}, resetting!")
-                    #     trigger_finder.reset_buffer()
-                    #     last_frame_produced_time = -1
-                    #     return True
+                if window.should_close():
+                    stats_printer.print_stats()
+                    sys.exit(0)
 
-                    trigger_finder.process_events(act_events_buf)
-                    
-                    stats_printer.print_stats_if_needed()
-
-                    if window.should_close():
-                        stats_printer.print_stats()
-                        sys.exit(0)
-
-            stats_printer.print_stats()        
-            return False
-
-        while main_loop():
-            pass
+        stats_printer.print_stats()        
 
 
 if __name__ == "__main__":
