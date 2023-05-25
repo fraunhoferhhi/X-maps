@@ -20,27 +20,75 @@ import time
 from dataclasses import dataclass
 
 
-
 def generate_frame(evs, frame):
     frame[:, :] = 0
     frame[evs["y"], evs["x"]] = 255
 
+
 @dataclass
 class DepthReprojectionPipe:
-    
     camera_width: int
     camera_height: int
-    
+
     projector_width: int
     projector_height: int
-    
+
+    projector_fps: int
+
+    should_drop_frames: bool
+
+    first_event_time_us: int = -1
+    start_time: int = -1
+
+    pos_filter = PolarityFilterAlgorithm(1)
+
+    # TODO revisit: does this have an effect on latency?
+    act_filter = None
+
+    pos_events_buf = None
+    act_events_buf = None
+
+    trigger_finder = None
+
     x_maps_disp: XMapsDisparity = None
     disp_to_depth: DisparityToDepth = None
     stats_printer: StatsPrinter = StatsPrinter()
-    
+
+    @property
+    def activity_time_ths(self):
+        return int(1e6 / self.projector_fps)
+
+    def should_close(self):
+        return self.window.should_close()
+
+    def on_frame_evs(self, evs):
+        """Callback from the trigger finder, evs contain the events of the current frame"""
+        # generate_frame(evs, frame)
+        # window.show_async(frame)
+
+        with self.stats_printer.measure_time("x-maps disp"):
+            point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(evs)
+
+        with self.stats_printer.measure_time("disp2depth"):
+            depth_map = self.disp_to_depth.compute_depth_map(disp_map)
+
+        self.window.show_async(depth_map)
+        self.stats_printer.count("frames shown")
+
     def setup(self, cli_params):
+        self.act_filter = ActivityNoiseFilterAlgorithm(self.camera_width, self.camera_height, self.activity_time_ths)
+
+        self.pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
+        self.act_events_buf = ActivityNoiseFilterAlgorithm.get_empty_output_buffer()
+
+        self.trigger_finder = RobustTriggerFinder(
+            projector_fps=self.projector_fps, stats=self.stats_printer, callback=self.on_frame_evs
+        )
+
         with SingleTimer("Setting up calibration"):
-            calib_obj = CamProjCalibration(cli_params["calib"], self.camera_width, self.camera_height, self.projector_width, self.projector_height)
+            calib_obj = CamProjCalibration(
+                cli_params["calib"], self.camera_width, self.camera_height, self.projector_width, self.projector_height
+            )
 
         with SingleTimer("Setting up projector time map"):
             proj_time_map = ProjectorTimeMap(calib_obj, cli_params["projector_time_map"])
@@ -49,7 +97,50 @@ class DepthReprojectionPipe:
             self.x_maps_disp = XMapsDisparity(calib_obj, proj_time_map, self.projector_width)
 
         with SingleTimer("Setting up disparity to depth"):
-            self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_obj, cli_params["z_near"], cli_params["z_far"])
+            self.disp_to_depth = DisparityToDepth(
+                self.stats_printer, calib_obj, cli_params["z_near"], cli_params["z_far"]
+            )
+
+        self.window = MTWindow(
+            title="X Maps Depth",
+            width=self.projector_width,
+            height=self.projector_height,
+            mode=BaseWindow.RenderMode.BGR,
+            open_directly=True,
+        )
+        self.window.set_keyboard_callback(self.keyboard_cb)
+
+    def keyboard_cb(self, key, scancode, action, mods):
+        if action != UIAction.RELEASE:
+            return
+        if key == UIKeyEvent.KEY_ESCAPE or key == UIKeyEvent.KEY_Q:
+            self.window.set_close_flag()
+
+    def process_events(self, evs):
+        if self.first_event_time_us == -1:
+            self.first_event_time_us = evs["t"][0]
+            self.start_time = time.perf_counter_ns()
+
+        ev_time_diff_ns = (evs["t"][0] - self.first_event_time_us) * 1000
+        proc_time_diff_ns = time.perf_counter_ns() - self.start_time
+        proc_behind = proc_time_diff_ns - ev_time_diff_ns
+
+        self.stats_printer.add_time_measure_ns("(cpu t - ev[0] t)", proc_behind)
+
+        frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / self.projector_fps))
+        self.stats_printer.add_metric("frames behind", frames_behind_i)
+        if frames_behind_i > 0 and self.should_drop_frames:
+            self.trigger_finder.drop_frame()
+
+        self.stats_printer.print_stats_if_needed()
+        self.stats_printer.count("processed evs", len(evs))
+
+        self.pos_filter.process_events(evs, self.pos_events_buf)
+        self.act_filter.process_events(self.pos_events_buf, self.act_events_buf)
+
+        self.trigger_finder.process_events(self.act_events_buf)
+
+        self.stats_printer.print_stats_if_needed()
 
 
 @click.command()
@@ -70,8 +161,13 @@ class DepthReprojectionPipe:
     required=True,
 )
 @click.option("--bias", help="Path to bias file, only required for live camera", type=click.Path())
-@click.option("--input", help="Either a .raw, .dat file for prerecordings. Don't specify for live capture.", type=click.Path())
-@click.option("--no-frame-dropping", help="Process all events, even when processing lags behind the event stream", is_flag=True)
+@click.option(
+    "--input", help="Either a .raw, .dat file for prerecordings. Don't specify for live capture.", type=click.Path()
+)
+@click.option("--loop-input", help="Loop input file", is_flag=True)
+@click.option(
+    "--no-frame-dropping", help="Process all events, even when processing lags behind the event stream", is_flag=True
+)
 def main(projector_width, projector_height, projector_fps, **cli_params):
     print("Code sample showing how to create a simple application testing different noise filtering strategies.")
     print(
@@ -87,106 +183,39 @@ def main(projector_width, projector_height, projector_fps, **cli_params):
     camera_width = 640
     camera_height = 480
 
-    pos_filter = PolarityFilterAlgorithm(1)
-
-    # TODO revisit: does this have an effect on latency?
-    activity_time_ths = int(1e6 / projector_fps)
-    act_filter = ActivityNoiseFilterAlgorithm(camera_width, camera_height, activity_time_ths)
-
-    pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
-    act_events_buf = ActivityNoiseFilterAlgorithm.get_empty_output_buffer()
-
-    frame = np.zeros((camera_height, camera_width, 3), dtype=np.uint8)
-
-    last_frame_produced_time = -1
-
     should_drop_frames = not cli_params["no_frame_dropping"]
 
-    pipe = DepthReprojectionPipe(camera_width, camera_height, projector_width, projector_height)
+    pipe = DepthReprojectionPipe(
+        camera_width, camera_height, projector_width, projector_height, projector_fps, should_drop_frames
+    )
     pipe.setup(cli_params)
 
-    # Window - Graphical User Interface (Display filtered events and process keyboard events)
-    with MTWindow(
-        title="X Maps Depth", width=projector_width, height=projector_height, mode=BaseWindow.RenderMode.BGR
-    ) as window:
-        
-        pipe.stats_printer.reset()
+    pipe.stats_printer.reset()
 
-        def on_frame_evs(evs):
-            """Callback from the trigger finder, evs contain the events of the current frame"""
-            # generate_frame(evs, frame)
-            # window.show_async(frame)
+    mv_iterator = NonBufferedBiasEventsIterator(
+        input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"]
+    )
+    # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
+    cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
 
-            nonlocal last_frame_produced_time
+    assert cam_height_reader == camera_height
+    assert cam_width_reader == camera_width
 
-            with pipe.stats_printer.measure_time("x-maps disp"):
-                point_cloud, disp_map = pipe.x_maps_disp.compute_event_disparity(evs)
+    for evs in mv_iterator:
+        with pipe.stats_printer.measure_time("main loop"):
+            # Dispatch system events to the window
+            EventLoop.poll_and_dispatch()
 
-            with pipe.stats_printer.measure_time("disp2depth"):
-                depth_map = pipe.disp_to_depth.compute_depth_map(disp_map)
+            if not len(evs):
+                continue
 
-            window.show_async(depth_map)
-            pipe.stats_printer.count("frames shown")
+            pipe.process_events(evs)
 
-            last_frame_produced_time = time.perf_counter()
+            if pipe.should_close():
+                pipe.stats_printer.print_stats()
+                sys.exit(0)
 
-        trigger_finder = RobustTriggerFinder(projector_fps=projector_fps, stats=pipe.stats_printer, callback=on_frame_evs)
-
-        def keyboard_cb(key, scancode, action, mods):
-            if action != UIAction.RELEASE:
-                return
-            if key == UIKeyEvent.KEY_ESCAPE or key == UIKeyEvent.KEY_Q:
-                window.set_close_flag()
-
-        window.set_keyboard_callback(keyboard_cb)
-
-        mv_iterator = NonBufferedBiasEventsIterator(input_filename=cli_params["input"], delta_t=4000, bias_file=cli_params["bias"])
-        # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
-        cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
-
-        last_frame_produced_time = -1
-
-        assert cam_height_reader == camera_height
-        assert cam_width_reader == camera_width
-
-        first_event_time_us = -1
-        start_time = time.perf_counter_ns()
-
-        for evs in mv_iterator:
-            with pipe.stats_printer.measure_time("main loop"):
-                
-                # Dispatch system events to the window
-                EventLoop.poll_and_dispatch()
-                
-                if not len(evs):
-                    continue
-                
-                ev_time_diff_ns = (evs["t"][0] - first_event_time_us) * 1000
-                proc_time_diff_ns = time.perf_counter_ns() - start_time
-                proc_behind = proc_time_diff_ns - ev_time_diff_ns
-                
-                pipe.stats_printer.add_time_measure_ns("(cpu t - ev[0] t)", proc_behind)
-                
-                frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / projector_fps))
-                pipe.stats_printer.add_metric("frames behind", frames_behind_i)
-                if frames_behind_i > 0 and should_drop_frames:
-                    trigger_finder.drop_frame()
-
-                pipe.stats_printer.print_stats_if_needed()
-                pipe.stats_printer.count("processed evs", len(evs))
-
-                pos_filter.process_events(evs, pos_events_buf)
-                act_filter.process_events(pos_events_buf, act_events_buf)
-
-                trigger_finder.process_events(act_events_buf)
-                
-                pipe.stats_printer.print_stats_if_needed()
-
-                if window.should_close():
-                    pipe.stats_printer.print_stats()
-                    sys.exit(0)
-
-        pipe.stats_printer.print_stats()        
+    pipe.stats_printer.print_stats()
 
 
 if __name__ == "__main__":
