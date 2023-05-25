@@ -73,7 +73,7 @@ To use data from the [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/
 
 1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`.
 2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data`.
-3. "Rebuild container" to reopen the project with the mounted folder.
+3. *Rebuild container* to reopen the project with the mounted folder.
 4. Terminal &rarr; Run Task... &rarr; *Download ESL (static) raw and bias files*.
 
 ### ESL static depth reprojection
