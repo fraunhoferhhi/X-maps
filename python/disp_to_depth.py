@@ -3,13 +3,13 @@ import numba
 import numpy as np
 
 
-@numba.jit(nopython=True, parallel=False, cache=True)
+@numba.jit(nopython=True, parallel=True, cache=True)
 def clip_normalize_uint8_depth_frame(depth_frame: np.ndarray, min_value: float, max_value: float) -> np.ndarray:
     """function to clip a depth map to min and max arguments, normalize to [0,255] and change dtype to np.uint8"""
     height, width = depth_frame.shape
     frame = np.zeros((height, width), dtype=np.uint8)
     for i in numba.prange(height):
-        for j in numba.prange(width):
+        for j in range(width):
             val = depth_frame[i, j]
             if val != 0:
                 val = max(min(val, max_value), min_value)
@@ -18,11 +18,11 @@ def clip_normalize_uint8_depth_frame(depth_frame: np.ndarray, min_value: float, 
     return frame
 
 
-@numba.jit(nopython=True, parallel=False, fastmath=True, cache=True)
+@numba.jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def apply_white_mask(frame, norm_frame):
     height, width = norm_frame.shape
     for i in numba.prange(height):
-        for j in numba.prange(width):
+        for j in range(width):
             if norm_frame[i, j] == 0:
                 frame[i, j, :] = 255
     return frame
@@ -40,15 +40,22 @@ def generate_color_map(norm_frame: np.ndarray) -> None:
     return frame
 
 
+@numba.jit(nopython=True, parallel=True, fastmath=True, cache=True)
 def disparity_to_depth_rectified(disparity, P1):
     """Function for simplified calculation of depth from disparity.
     This calculation neglects the change in depth caused be the rotation of the rectification.
     If this rotation is small, the error is small."""
 
-    disparity_no_div_error = np.clip(disparity, 1e-9, None)
+    height, width = disparity.shape
+    depth = np.zeros((height, width), dtype=np.float32)
 
-    depth = P1[0, 3] / disparity_no_div_error
-    depth[disparity == 0] = 0.0
+    for i in numba.prange(height):
+        for j in range(width):
+            val = disparity[i, j]
+            if val == 0:
+                depth[i, j] = 0.0
+            else:
+                depth[i, j] = max(P1[0, 3] / val, 1e-9)
 
     return depth
 
@@ -74,19 +81,22 @@ class DisparityToDepth:
         with self.stats.measure_time("dilate"):
             disp_map = cv2.dilate(disp_map, self.dilate_kernel)
 
+        with self.stats.measure_time("remap disp"):
+            disp = cv2.remap(
+                disp_map,
+                self.calib.disp_proj_mapx,
+                self.calib.disp_proj_mapy,
+                cv2.INTER_NEAREST,
+                cv2.BORDER_CONSTANT,
+            )
+
         # get depth map from rectified disparity map and append to list of depth maps
         # NOTE: This depth calculatoin is quick but not correct. It does not take into account the
         # change of depth during the rotation back from the rectified coordinate system to the
         # unrectified coordinate system.
         with self.stats.measure_time("d2d_rect"):
             depth_map_f32 = disparity_to_depth_rectified(
-                cv2.remap(
-                    disp_map,
-                    self.calib.disp_proj_mapx,
-                    self.calib.disp_proj_mapy,
-                    cv2.INTER_NEAREST,
-                    cv2.BORDER_CONSTANT,
-                ),
+                disp,
                 self.calib.P2,
             )
 
