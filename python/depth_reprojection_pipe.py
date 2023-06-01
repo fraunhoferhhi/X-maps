@@ -1,4 +1,5 @@
 from typing import List
+
 from metavision_sdk_core import PolarityFilterAlgorithm
 from metavision_sdk_cv import ActivityNoiseFilterAlgorithm
 from metavision_sdk_ui import BaseWindow, MTWindow, UIAction, UIKeyEvent
@@ -13,6 +14,19 @@ from disp_to_depth import DisparityToDepth
 import time
 from dataclasses import dataclass, field
 
+USE_FAKE_WINDOW = False
+
+
+class FakeWindow:
+    def should_close(self):
+        return False
+
+    def show_async(self, img):
+        pass
+
+    def set_keyboard_callback(self, cb):
+        pass
+
 
 @dataclass
 class Pool:
@@ -25,6 +39,7 @@ class Pool:
 
     def return_buf(self, buf):
         self.bufs.append(buf)
+
 
 @dataclass
 class RuntimeParams:
@@ -138,13 +153,16 @@ class DepthReprojectionPipe:
         with SingleTimer("Setting up disparity to depth"):
             self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_obj, self.params.z_near, self.params.z_far)
 
-        self.window = MTWindow(
-            title="X Maps Depth",
-            width=self.projector_width,
-            height=self.projector_height,
-            mode=BaseWindow.RenderMode.BGR,
-            open_directly=True,
-        )
+        if USE_FAKE_WINDOW:
+            self.window = FakeWindow()
+        else:
+            self.window = MTWindow(
+                title="X Maps Depth",
+                width=self.projector_width,
+                height=self.projector_height,
+                mode=BaseWindow.RenderMode.BGR,
+                open_directly=True,
+            )
         self.window.set_keyboard_callback(self.keyboard_cb)
 
         return self
