@@ -43,6 +43,7 @@
                 "--z-far",
                 "1.2",
                 "--no-frame-dropping",
+                // "--loop-input",
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

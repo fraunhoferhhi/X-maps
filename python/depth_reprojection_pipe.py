@@ -214,3 +214,8 @@ Available keyboard shortcuts:
         self.trigger_finder.process_events(act_out_buf)
 
         self.stats_printer.print_stats_if_needed()
+
+    def reset(self):
+        self.first_event_time_us = -1
+        self.start_time = -1
+        self.trigger_finder.reset()

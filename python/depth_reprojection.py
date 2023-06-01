@@ -7,6 +7,28 @@ import click
 import sys
 
 
+def project_events(bias, input, params, delta_t, pipe):
+    mv_iterator = NonBufferedBiasEventsIterator(input_filename=input, delta_t=delta_t, bias_file=bias)
+    # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
+    cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
+
+    assert cam_height_reader == params.camera_height
+    assert cam_width_reader == params.camera_width
+
+    for evs in mv_iterator:
+        with pipe.stats_printer.measure_time("main loop"):
+            # Dispatch system events to the window
+            EventLoop.poll_and_dispatch()
+
+            if not len(evs):
+                continue
+
+            pipe.process_events(evs)
+
+            if pipe.should_close():
+                sys.exit(0)
+
+
 @click.command()
 @click.option("--projector-width", default=720, help="Projector width in pixels", type=int)
 @click.option("--projector-height", default=1280, help="Projector height in pixels", type=int)
@@ -43,25 +65,12 @@ def main(bias, input, loop_input, **cli_params):
     print(f"If you see frame drops, try reducing EV_PACKETS_PER_FRAME to 1. This may increase latency.")
 
     with DepthReprojectionPipe(params) as pipe:
-        mv_iterator = NonBufferedBiasEventsIterator(input_filename=input, delta_t=delta_t, bias_file=bias)
-        # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
-        cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
-
-        assert cam_height_reader == params.camera_height
-        assert cam_width_reader == params.camera_width
-
-        for evs in mv_iterator:
-            with pipe.stats_printer.measure_time("main loop"):
-                # Dispatch system events to the window
-                EventLoop.poll_and_dispatch()
-
-                if not len(evs):
-                    continue
-
-                pipe.process_events(evs)
-
-                if pipe.should_close():
-                    sys.exit(0)
+        while True:
+            project_events(bias, input, params, delta_t, pipe)
+            if loop_input:
+                pipe.reset()
+            else:
+                break
 
 
 if __name__ == "__main__":

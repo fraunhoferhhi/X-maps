@@ -109,8 +109,10 @@ class RobustTriggerFinder:
     def frame_len_ms(self):
         return 1e3 / self.projector_fps
 
-    def reset_buffer(self):
-        self._ev_buf.clear()
+    def reset(self):
+        self._ev_buf.pop_all()
+        self.should_drop = False
+        self.last_frame_start_us = -1
 
     def drop_frame(self):
         self.should_drop = True
