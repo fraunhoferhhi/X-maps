@@ -33,8 +33,12 @@ import sys
     "--no-frame-dropping", help="Process all events, even when processing lags behind the event stream", is_flag=True
 )
 def main(bias, input, loop_input, **cli_params):
-    print("Code sample showing how to create a simple application testing different noise filtering strategies.")
-    print("Available keyboard options:\n" "   - S: Toggle printing statistics\n" "  - Q/Escape: Quit the application\n")
+    print(
+        """
+Available keyboard options:
+- S:     Toggle printing statistics
+- Q/Esc: Quit the application"""
+    )
 
     # TODO remove these static values, retrieve from event stream
     params = RuntimeParams(camera_width=640, camera_height=480, **cli_params)
