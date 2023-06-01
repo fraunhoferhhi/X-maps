@@ -163,6 +163,13 @@ class DepthReprojectionPipe:
                 mode=BaseWindow.RenderMode.BGR,
                 open_directly=True,
             )
+            print(
+                """
+Available keyboard shortcuts:
+- S:     Toggle printing statistics
+- Q/Esc: Quit the application"""
+            )
+
         self.window.set_keyboard_callback(self.keyboard_cb)
 
         return self

@@ -33,21 +33,14 @@ import sys
     "--no-frame-dropping", help="Process all events, even when processing lags behind the event stream", is_flag=True
 )
 def main(bias, input, loop_input, **cli_params):
-    print(
-        """
-Available keyboard options:
-- S:     Toggle printing statistics
-- Q/Esc: Quit the application"""
-    )
-
     # TODO remove these static values, retrieve from event stream
     params = RuntimeParams(camera_width=640, camera_height=480, **cli_params)
 
     EV_PACKETS_PER_FRAME = 4
-    delta_t = 1e6 / params.projector_fps // EV_PACKETS_PER_FRAME
+    delta_t = 1e6 / params.projector_fps / EV_PACKETS_PER_FRAME
 
-    print(f"Using delta_t: {delta_t} us for {params.projector_fps} projector fps.")
-    print(f"If you see frame drops, try reducing EV_PACKETS_PER_FRAME to 1. This will increase latency.")
+    print(f"Using delta_t={delta_t:.2f} us to process {EV_PACKETS_PER_FRAME} ev packets per projector frame.")
+    print(f"If you see frame drops, try reducing EV_PACKETS_PER_FRAME to 1. This may increase latency.")
 
     with DepthReprojectionPipe(params) as pipe:
         mv_iterator = NonBufferedBiasEventsIterator(input_filename=input, delta_t=delta_t, bias_file=bias)
