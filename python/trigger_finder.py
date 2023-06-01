@@ -98,6 +98,8 @@ class RobustTriggerFinder:
     frame_paused_thresh_us = 40
     should_drop = False
 
+    last_frame_start_us = -1
+
     _ev_buf: Optional[EventBufferList] = None
 
     def __post_init__(self):
@@ -171,6 +173,9 @@ class RobustTriggerFinder:
                     end_time = evs["t"][next_idx - 2]
 
                     self.stats.add_metric("frame len [ms]", (end_time - start_time) / 1000)
+                    if self.last_frame_start_us != -1:
+                        self.stats.add_metric("frame interval [ms]", (start_time - self.last_frame_start_us) / 1000)
+                    self.last_frame_start_us = start_time
 
                     self._ev_buf.push(evs[next_idx - 2 :])
                     return start_time
