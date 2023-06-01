@@ -1,4 +1,4 @@
-from typing import Any
+from typing import List
 from metavision_sdk_core import PolarityFilterAlgorithm
 from metavision_sdk_cv import ActivityNoiseFilterAlgorithm
 from metavision_sdk_ui import BaseWindow, MTWindow, UIAction, UIKeyEvent
@@ -11,8 +11,20 @@ from proj_time_map import ProjectorTimeMap
 from disp_to_depth import DisparityToDepth
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+
+@dataclass
+class Pool:
+    bufs: List["EventCDBuffer"] = field(default_factory=list)
+
+    def get_buf(self):
+        if not self.bufs:
+            return PolarityFilterAlgorithm.get_empty_output_buffer()
+        return self.bufs.pop()
+
+    def return_buf(self, buf):
+        self.bufs.append(buf)
 
 @dataclass
 class RuntimeParams:
@@ -45,13 +57,15 @@ class DepthReprojectionPipe:
     first_event_time_us: int = -1
     start_time: int = -1
 
+    _pool = Pool()
+
     pos_filter = PolarityFilterAlgorithm(1)
 
     # TODO revisit: does this have an effect on latency?
     act_filter = None
 
     pos_events_buf = None
-    act_events_buf = None
+    # act_events_buf = None
 
     trigger_finder = None
 
@@ -104,10 +118,10 @@ class DepthReprojectionPipe:
         self.act_filter = ActivityNoiseFilterAlgorithm(self.camera_width, self.camera_height, self.activity_time_ths)
 
         self.pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
-        self.act_events_buf = ActivityNoiseFilterAlgorithm.get_empty_output_buffer()
+        # self.act_events_buf = ActivityNoiseFilterAlgorithm.get_empty_output_buffer()
 
         self.trigger_finder = RobustTriggerFinder(
-            projector_fps=self.projector_fps, stats=self.stats_printer, callback=self.on_frame_evs
+            projector_fps=self.projector_fps, stats=self.stats_printer, callback=self.on_frame_evs, pool=self._pool
         )
 
         with SingleTimer("Setting up calibration"):
@@ -168,8 +182,10 @@ class DepthReprojectionPipe:
         self.stats_printer.count("processed evs", len(evs))
 
         self.pos_filter.process_events(evs, self.pos_events_buf)
-        self.act_filter.process_events(self.pos_events_buf, self.act_events_buf)
 
-        self.trigger_finder.process_events(self.act_events_buf)
+        act_out_buf = self._pool.get_buf()
+        self.act_filter.process_events(self.pos_events_buf, act_out_buf)
+
+        self.trigger_finder.process_events(act_out_buf)
 
         self.stats_printer.print_stats_if_needed()

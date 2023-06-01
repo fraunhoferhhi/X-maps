@@ -1,7 +1,7 @@
 import numpy as np
 from metavision_sdk_base import EventCD, EventCDBuffer
 from dataclasses import dataclass, field
-from typing import Callable, List
+from typing import Callable, List, Optional, Any
 from stats_printer import StatsPrinter
 
 
@@ -13,28 +13,39 @@ class EventBufferList:
     # TODO we're reinventing the wheel here a little bit
     # replace with some Metavision ring buffer thing?
 
+    _pool: "Pool"
     _bufs: List[np.ndarray] = field(default_factory=list)
+    _returned_np_evs: Any = field(default_factory=list)
 
     def append(self, evs: EventCDBuffer):
-        np_copy = np.copy(evs.numpy())
-        if len(np_copy) > 0:
-            self._bufs.append(np_copy)
+        if len(evs.numpy()):
+            self._bufs.append(evs)
+        else:
+            self._pool.return_buf(evs)
 
     def clear(self):
         self._bufs.clear()
 
     def empty(self):
-        return not self._bufs
+        return not self._returned_np_evs and not self._bufs
 
     def first_ev_time(self):
-        if not self._bufs:
+        if not self._returned_np_evs and not self._bufs:
             return -1
-        return self._bufs[0]["t"][0]
+
+        if not self._returned_np_evs:
+            return self._bufs[0].numpy()["t"][0]
+        else:
+            return self._returned_np_evs[0]["t"][0]
 
     def last_ev_time(self):
-        if not self._bufs:
+        if not self._returned_np_evs and not self._bufs:
             return -1
-        return self._bufs[-1]["t"][-1]
+
+        if not self._bufs:
+            return self._returned_np_evs[-1]["t"][-1]
+        else:
+            return self._bufs[-1].numpy()["t"][-1]
 
     def time_span_us(self):
         first_time = self.first_ev_time()
@@ -46,7 +57,7 @@ class EventBufferList:
         return last_time - first_time
 
     def num_events(self):
-        return sum(len(buf) for buf in self._bufs)
+        return sum(len(buf) for buf in self._returned_np_evs) + sum(len(buf.numpy()) for buf in self._bufs)
 
     def drop(self, drop_len_ms):
         drop_until_us = self.first_ev_time() + drop_len_ms * 1000
@@ -54,13 +65,19 @@ class EventBufferList:
         have_dropped = False
 
         while not self.empty() and self.first_ev_time() < drop_until_us:
-            self._bufs.pop(0)
+            if len(self._returned_np_evs):
+                self._returned_np_evs.pop(0)
+            else:
+                self._pool.return_buf(self._bufs.pop(0))
             have_dropped = True
 
         return have_dropped
 
     def pop_all(self):
-        ret = np.concatenate(self._bufs)
+        ret = np.concatenate(self._returned_np_evs + [buf.numpy() for buf in self._bufs])
+        for buf in self._bufs:
+            self._pool.return_buf(buf)
+        self._returned_np_evs.clear()
         self._bufs.clear()
         return ret
 
@@ -68,7 +85,7 @@ class EventBufferList:
         # logic intends that trigger finder will push the remaining events here, so it should be empty
         assert self.empty()
         if len(evs):
-            self._bufs.append(evs)
+            self._returned_np_evs.append(evs)
 
 
 @dataclass
@@ -76,11 +93,15 @@ class RobustTriggerFinder:
     projector_fps: int
     stats: StatsPrinter
     callback: Callable[[np.ndarray], None]
+    pool: "Pool"
 
     frame_paused_thresh_us = 40
     should_drop = False
 
-    _ev_buf: EventBufferList = EventBufferList()
+    _ev_buf: Optional[EventBufferList] = None
+
+    def __post_init__(self):
+        self._ev_buf = EventBufferList(self.pool)
 
     @property
     def frame_len_ms(self):
