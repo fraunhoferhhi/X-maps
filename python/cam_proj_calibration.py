@@ -44,12 +44,13 @@ def initUndistortRectifyMapInverse(cameraMatrix, distCoeffs, R, newCameraMatrix,
     return maps[..., 0], maps[..., 1]
 
 
-def map_to_i16(map_f32: np.ndarray) -> np.ndarray:
-    """Function to convert a map from float32 to int16"""
-    assert map_f32.dtype == np.float32
-    assert map_f32.max() <= 2**15 - 1
-    map_i16 = np.round(map_f32).astype("int16")
-    return map_i16
+def map_to_i16(mapx_f32: np.ndarray, mapy_f32: np.ndarray) -> np.ndarray:
+    assert mapx_f32.dtype == np.float32 and mapy_f32.dtype == np.float32
+    mapx_i = np.round(mapx_f32)
+    mapy_i = np.round(mapy_f32)
+    assert mapx_i.min() >= np.iinfo(np.int16).min and mapx_i.max() <= np.iinfo(np.int16).max
+    assert mapy_i.min() >= np.iinfo(np.int16).min and mapy_i.max() <= np.iinfo(np.int16).max
+    return np.stack((mapx_i.astype(np.int16), mapy_i.astype(np.int16)), axis=-1)
 
 
 @dataclass
@@ -158,5 +159,4 @@ class CamProjCalibration:
             (self.projector_width, self.projector_height),
         )
 
-        self.disp_proj_mapx_i16 = map_to_i16(self.disp_proj_mapx)
-        self.disp_proj_mapy_i16 = map_to_i16(self.disp_proj_mapy)
+        self.disp_proj_mapxy_i16 = map_to_i16(self.disp_proj_mapx, self.disp_proj_mapy)

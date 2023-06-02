@@ -62,22 +62,6 @@ def disparity_to_depth_rectified(disparity, P1):
     return depth
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True, cache=True, error_model="numpy")
-def remap(values, mapx, mapy):
-    """Remap values to new coordinates using mapx and mapy. Reimplementation of cv2.remap.
-    We are using NEAREST interpolation and BORDER_CONSTANT border mode, so we can precompute
-    the coordinates to int16, which is faster than cv2.remap with float32's."""
-    height, width = mapx.shape
-    remapped = np.zeros((height, width), dtype=values.dtype)
-    values_height, values_width = values.shape
-    for i in numba.prange(height):
-        for j in range(width):
-            mapx_val, mapy_val = mapx[i, j], mapy[i, j]
-            if 0 <= mapx_val < values_width and 0 <= mapy_val < values_height:
-                remapped[i, j] = values[mapy_val, mapx_val]
-    return remapped
-
-
 class DisparityToDepth:
     def __init__(self, stats, calib, z_near, z_far):
         self.stats = stats
@@ -100,7 +84,13 @@ class DisparityToDepth:
             disp_map = cv2.dilate(disp_map, self.dilate_kernel)
 
         with self.stats.measure_time("remap disp"):
-            disp = remap(disp_map, self.calib.disp_proj_mapx_i16, self.calib.disp_proj_mapy_i16)
+            disp = cv2.remap(
+                disp_map,
+                map1=self.calib.disp_proj_mapxy_i16,
+                map2=None,
+                interpolation=cv2.INTER_NEAREST,
+                borderMode=cv2.BORDER_CONSTANT,
+            )
 
         # NOTE: This depth calculatoin is quick but not correct. It does not take into account the
         # change of depth during the rotation back from the rectified coordinate system to the
