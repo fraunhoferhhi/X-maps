@@ -31,6 +31,24 @@ import cv2
 # - check all methods align
 
 
+def dump_frame_data(events, inlier_mask, xcr_f32, ycr_f32, disp_f32, csv_name="/ESL_data/static/seq1/frame.csv"):
+    import pandas as pd
+
+    df = pd.DataFrame(
+        [
+            events["x"][inlier_mask].T,
+            events["y"][inlier_mask].T,
+            events["t"][inlier_mask].T,
+            xcr_f32[inlier_mask].T,
+            ycr_f32[inlier_mask].T,
+            disp_f32.T,
+        ],
+    ).T
+    df.columns = ["x", "y", "t", "x_r", "y_r", "disp"]
+
+    df.to_csv(csv_name, index=False)
+
+
 def compute_disparity(xcr_f32, ycr_f32, t, proj_yt_map, T_PX_SCALE, X_OFFSET):
     xcr_i16 = np.rint(xcr_f32).astype(np.int16)
     ycr_i16 = np.rint(ycr_f32).astype(np.int16)
@@ -211,5 +229,13 @@ class XMapsDisparity:
                     x_cam = events["x"][inlier_mask]
                     y_cam = events["y"][inlier_mask]
                     disp_map[y_cam, x_cam] = disp_f32
+
+        # dump_frame_data(
+        #     events,
+        #     inlier_mask,
+        #     xcr_f32,
+        #     ycr_f32,
+        #     disp_f32,
+        # )
 
         return point_cloud, disp_map
