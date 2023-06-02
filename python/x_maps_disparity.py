@@ -3,7 +3,6 @@ import numpy as np
 
 from epipolar_disparity import (
     rectify_cam_coords,
-    compute_disparity,
     construct_point_cloud,
 )
 
@@ -45,30 +44,18 @@ def compute_disparity(xcr_f32, ycr_f32, t, proj_x_map, T_PX_SCALE, X_OFFSET):
     # event time in the scale of the X-map
     t_scaled = np.rint(event_norm_t * T_PX_SCALE).astype(np.int16)
 
+    # spurious events create from scene movement or noise may lie outside the projector X-map
+    # these events will be filtered out
     y_inlier_mask = (ycr_f32 >= 0) & (ycr_f32 < proj_x_map.shape[0] - 1)
 
     # TODO use cv2.remap to retrieve with interpolation from proj_x_map
     # TODO subpixel + 0.5
     x_proj = proj_x_map[ycr_i16[y_inlier_mask], t_scaled[y_inlier_mask]]
 
-    # TODO check x_proj lies within defined pixels in proj_x_map
-
     disp = x_proj - xcr_i16[y_inlier_mask] - X_OFFSET
 
     disp_inlier_mask = disp >= 0
     y_inlier_mask[y_inlier_mask] = disp_inlier_mask
-
-    # # PAPER VIS
-    # import matplotlib.pyplot as plt
-    # import seaborn as sns
-    # import pandas as pd
-
-    # sns.set_theme()
-    # # plt.scatter(x=t, y=ycr_f32, c=xcr_f32, cmap="plasma")
-    # df = pd.DataFrame({"t": t_scaled[y_inlier_mask], "y": ycr_f32[y_inlier_mask], "x": xcr_f32[y_inlier_mask]})
-    # df.plot.scatter(x="t", y="y", c="x", cmap="plasma")
-    # plt.gca().invert_yaxis()
-    # plt.show()
 
     return disp[disp_inlier_mask], y_inlier_mask
 
@@ -127,8 +114,8 @@ class XMapsDisparity:
         self.disp_map_shape = proj_time_map.projector_time_map_rectified.shape
 
     def init_proj_x_map(self, proj_time_map, proj_width):
-        # to mask where x = 0
-        # TODO reduce to 1 if it works
+        # we want to differentiate between x=0 and x undefined
+        # so we add an offset to the x values -> x=0 starts at x'=X_OFFSET, x' < X_OFFSET means x is undefined
         self.X_OFFSET = 4242
 
         # use 16 bit for indices
