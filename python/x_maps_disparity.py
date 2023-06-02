@@ -122,11 +122,11 @@ class XMapsDisparity:
         assert proj_time_map.shape[0] <= 2**15 - 1
         assert proj_time_map.shape[1] + self.X_OFFSET <= 2**15 - 1
 
-        # T_PX_SCALE = proj_time_map.shape[1] - 1
-        self.T_MAP_SIZE = 1080
+        # the time axis can be freely discretized
+        # we choose the projector width as the number of time steps
+        # which should allow different scan lines to map to different time columns
+        self.T_MAP_SIZE = proj_width
         self.T_PX_SCALE = self.T_MAP_SIZE - 1
-
-        # xy_xsf, xy_ysf = init_direct_disparity(proj_time_map.shape)
 
         self.proj_x_map, t_diffs = optimize_proj_x_map(
             proj_time_map, self.T_MAP_SIZE, self.T_PX_SCALE, self.X_OFFSET, proj_width
