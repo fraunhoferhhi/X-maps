@@ -8,12 +8,14 @@ def clip_normalize_uint8_depth_frame(depth_frame: np.ndarray, min_value: float, 
     """function to clip a depth map to min and max arguments, normalize to [0,255] and change dtype to np.uint8"""
     height, width = depth_frame.shape
     frame = np.zeros((height, width), dtype=np.uint8)
+    min_value, max_value = np.float32(min_value), np.float32(max_value)  # convert min_value and max_value to float32
+    range_value = max_value - min_value
     for i in numba.prange(height):
         for j in range(width):
             val = depth_frame[i, j]
             if val != 0:
                 val = max(min(val, max_value), min_value)
-                val = (val - min_value) / (max_value - min_value) * 255
+                val = (val - min_value) / range_value * 255
             frame[i, j] = np.uint8(val)
     return frame
 
