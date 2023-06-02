@@ -68,12 +68,12 @@ The project is configured to run from a Docker image in Visual Studio Code (VS C
 
 <!-- <p align="right">(<a href="#readme-top">back to top</a>)</p> -->
 
-### Download test data
+### Download ESL Raw Data for Testing
 
 To use data from the [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/esl.html) dataset locally:
 
 1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`.
-2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data`.
+2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data` in the container.
 3. *Rebuild container* to reopen the project with the mounted folder.
 4. Terminal &rarr; Run Task... &rarr; *Download ESL (static) raw and bias files*.
 
@@ -106,6 +106,15 @@ The parameters you can use when running the `depth_reprojection.py` script can b
 | `--bias`  | Specifies the path to the bias file. This is only required for live camera usage. |
 | `--input`  | Specifies the path to either a .raw, .dat file for prerecorded sessions. Leave this parameter out for live capture. |
 | `--no-frame-dropping` | By default, events are dropped when the processing is too slow. Use this parameter to disable frame dropping, and process all incoming events. |
+
+### Compute evaluation on static ESL data
+
+As there is no dataset providing ground truth depth, we chose to check the correctness of X-Maps depth estimation by comparing it to the results of the init step of ESL, which performs a disparity search in time maps. The following steps describe how to download the ESL time maps, process them with the MC3D implementation of ESL, ESL init, and finally X-Maps. After all steps are completed, Table 1 of the paper will be printed.
+
+1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`.
+2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data` in the container.
+3. *Rebuild container* to reopen the project with the mounted folder.
+4. Terminal &rarr; Run Task... &rarr; *Run X-maps evaluation script*.
 
 
 <!-- ## Technical details -->
