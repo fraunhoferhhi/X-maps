@@ -49,8 +49,8 @@ def initUndistortRectifyMapInverse(cameraMatrix, distCoeffs, R, newCameraMatrix,
 
 def map_to_i16(mapx_f32: np.ndarray, mapy_f32: np.ndarray) -> np.ndarray:
     assert mapx_f32.dtype == np.float32 and mapy_f32.dtype == np.float32
-    mapx_i = np.round(mapx_f32)
-    mapy_i = np.round(mapy_f32)
+    mapx_i = np.rint(mapx_f32)
+    mapy_i = np.rint(mapy_f32)
     assert mapx_i.min() >= np.iinfo(np.int16).min and mapx_i.max() <= np.iinfo(np.int16).max
     assert mapy_i.min() >= np.iinfo(np.int16).min and mapy_i.max() <= np.iinfo(np.int16).max
     return np.stack((mapx_i.astype(np.int16), mapy_i.astype(np.int16)), axis=-1)
