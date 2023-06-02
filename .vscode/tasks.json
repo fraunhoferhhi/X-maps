@@ -8,6 +8,12 @@
             "type": "shell",
             "command": "time /bin/bash eval/download_ESl_static_raw_bias.sh",
             "problemMatcher": []
+        },
+        {
+            "label": "Run X-maps evaluation script",
+            "type": "shell",
+            "command": "time /bin/bash eval/x-map-eval.sh",
+            "problemMatcher": []
         }
     ]
 }
