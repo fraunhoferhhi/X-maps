@@ -1,3 +1,5 @@
+from typing import Optional
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -6,7 +8,7 @@ import os
 import yaml
 
 
-def open_calibration_data(calib_data_path: str) -> dict:
+def open_calibration_data(calib_data_path: str) -> Optional[dict]:
     """function to open the calibration.yaml file"""
     if os.path.exists(calib_data_path):
         with open(calib_data_path, "r") as file:
@@ -17,7 +19,7 @@ def open_calibration_data(calib_data_path: str) -> dict:
         return None
 
 
-def read_cv_matrix(calibration_data: dict, name: str) -> np.ndarray:
+def read_cv_matrix(calibration_data: dict, name: str) -> Optional[np.ndarray]:
     """function to read an opencv matrix from yaml-dict as written by the calibration application"""
     if (
         name in calibration_data
@@ -28,6 +30,7 @@ def read_cv_matrix(calibration_data: dict, name: str) -> np.ndarray:
         rows = calibration_data[name]["rows"]
         return np.array(calibration_data[name]["data"]).reshape(rows, cols)
     else:
+        print(f"Could not find matrix {name} in calibration data")
         return None
 
 
@@ -66,7 +69,7 @@ class CamProjCalibration:
         self.projector_width = projector_width
         self.projector_height = projector_height
 
-        # TODO make this parameter configurable
+        # TODO make this parameter configurable, compute from camera and projector resolution?
         rectification_scale = 2.75
         self.rect_image_width = round(camera_width * rectification_scale)
         self.rect_image_height = round(camera_height * rectification_scale)
