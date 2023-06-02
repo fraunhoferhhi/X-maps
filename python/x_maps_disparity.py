@@ -7,29 +7,6 @@ from epipolar_disparity import (
     construct_point_cloud,
 )
 
-import cv2
-
-# COMPARED TO DIRECT DISPARITY:
-# - no dilation -> no depth bleeding at depth discontinuities
-
-# TASKS
-
-# DENSE YT DISPARITY:
-# - keep all these as flags for ablation:
-# - subpixel x retrieval of xpr from yt map - probably drowned in noise
-
-# TIME MAP CALIBRATION
-# - compute avg projector time map in places where local disparity difference is minimal
-# - calibrate ESL time map
-
-# IMPL
-# - switch between depth modes while paused
-# - numba impl for real time perf?
-# - point cloud depth as viridis
-
-# EVAL
-# - check all methods align
-
 
 def dump_frame_data(events, inlier_mask, xcr_f32, ycr_f32, disp_f32, csv_name="/ESL_data/static/seq1/frame.csv"):
     import pandas as pd
@@ -49,24 +26,32 @@ def dump_frame_data(events, inlier_mask, xcr_f32, ycr_f32, disp_f32, csv_name="/
     df.to_csv(csv_name, index=False)
 
 
-def compute_disparity(xcr_f32, ycr_f32, t, proj_yt_map, T_PX_SCALE, X_OFFSET):
+def compute_disparity(xcr_f32, ycr_f32, t, proj_x_map, T_PX_SCALE, X_OFFSET):
+    # TODO perf are xcr_f32 and ycr_f32 ever used as floats?
+    # otherwise directly look up the int16's
+
+    # rectified rounded event coordinates
     xcr_i16 = np.rint(xcr_f32).astype(np.int16)
     ycr_i16 = np.rint(ycr_f32).astype(np.int16)
 
-    # events may not be completely sorted by time after averaging
+    # events may not be completely sorted by time if
+    # they were processed in a filter that averages over coordinates
     min_t = t.min()
     max_t = t.max()
+
+    # event time normalized to [0, 1]
     event_norm_t = (t - min_t) / (max_t - min_t)
 
+    # event time in the scale of the X-map
     t_scaled = np.rint(event_norm_t * T_PX_SCALE).astype(np.int16)
 
-    y_inlier_mask = (ycr_f32 >= 0) & (ycr_f32 < proj_yt_map.shape[0] - 1)
+    y_inlier_mask = (ycr_f32 >= 0) & (ycr_f32 < proj_x_map.shape[0] - 1)
 
-    # TODO use cv2.remap to retrieve with interpolation from proj_yt_map
+    # TODO use cv2.remap to retrieve with interpolation from proj_x_map
     # TODO subpixel + 0.5
-    x_proj = proj_yt_map[ycr_i16[y_inlier_mask], t_scaled[y_inlier_mask]]
+    x_proj = proj_x_map[ycr_i16[y_inlier_mask], t_scaled[y_inlier_mask]]
 
-    # TODO check x_proj lies within defined pixels in proj_yt_map
+    # TODO check x_proj lies within defined pixels in proj_x_map
 
     disp = x_proj - xcr_i16[y_inlier_mask] - X_OFFSET
 
@@ -89,20 +74,20 @@ def compute_disparity(xcr_f32, ycr_f32, t, proj_yt_map, T_PX_SCALE, X_OFFSET):
 
 
 @numba.njit
-def optimize_proj_yt_map(proj_time_map, T_MAP_SIZE, T_PX_SCALE, X_OFFSET, proj_width):
+def optimize_proj_x_map(proj_time_map, T_MAP_SIZE, T_PX_SCALE, X_OFFSET, proj_width):
     # TODO perf precompute
 
-    proj_yt_map = np.zeros((proj_time_map.shape[0], T_MAP_SIZE), dtype=np.int16)
+    proj_x_map = np.zeros((proj_time_map.shape[0], T_MAP_SIZE), dtype=np.int16)
 
     # don't allow more than two rows difference
     max_t_diff = 2 / proj_width
     # max_t_diff = np.inf
 
-    # proj_yt_map_def = np.zeros((proj_time_map.shape[0], T_MAP_SIZE), dtype=np.uint8)
+    # proj_x_map_def = np.zeros((proj_time_map.shape[0], T_MAP_SIZE), dtype=np.uint8)
     t_diffs = np.zeros((proj_time_map.shape[0], T_MAP_SIZE), dtype=np.float32)
 
-    for y in range(proj_yt_map.shape[0]):
-        for t_coord in range(proj_yt_map.shape[1]):
+    for y in range(proj_x_map.shape[0]):
+        for t_coord in range(proj_x_map.shape[1]):
             # compute optimal x for each t
 
             t = t_coord / T_PX_SCALE
@@ -126,13 +111,13 @@ def optimize_proj_yt_map(proj_time_map, T_MAP_SIZE, T_PX_SCALE, X_OFFSET, proj_w
 
             if min_t_diff_x != -1:
                 if min_t_diff <= max_t_diff:
-                    proj_yt_map[y, t_coord] = min_t_diff_x + X_OFFSET
-                    # proj_yt_map_def[y, t_coord] = True
+                    proj_x_map[y, t_coord] = min_t_diff_x + X_OFFSET
+                    # proj_x_map_def[y, t_coord] = True
                     t_diffs[y, t_coord] = min_t_diff
 
-    # return proj_yt_map, proj_yt_map_def
-    return proj_yt_map, t_diffs
-    # return proj_yt_map
+    # return proj_x_map, proj_x_map_def
+    return proj_x_map, t_diffs
+    # return proj_x_map
 
 
 class XMapsDisparity:
@@ -156,8 +141,7 @@ class XMapsDisparity:
 
         # xy_xsf, xy_ysf = init_direct_disparity(proj_time_map.shape)
 
-        # self.proj_yt_map = optimize_proj_yt_map(proj_time_map, self.T_MAP_SIZE, self.T_PX_SCALE, self.X_OFFSET)
-        self.proj_yt_map, t_diffs = optimize_proj_yt_map(
+        self.proj_x_map, t_diffs = optimize_proj_x_map(
             proj_time_map, self.T_MAP_SIZE, self.T_PX_SCALE, self.X_OFFSET, proj_width
         )
 
@@ -182,13 +166,13 @@ class XMapsDisparity:
 
         # at time t and rectified y, access yt map
         disp_f32, inlier_mask = compute_disparity(
-            xcr_f32, ycr_f32, events["t"], self.proj_yt_map, self.T_PX_SCALE, self.X_OFFSET
+            xcr_f32, ycr_f32, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
         )
 
         # if proj_window_name is not None:
-        #     pm_display = self.proj_yt_map.copy()
+        #     pm_display = self.proj_x_map.copy()
         #     pm_display -= self.X_OFFSET
-        #     pm_display[self.proj_yt_map == 0] = 0
+        #     pm_display[self.proj_x_map == 0] = 0
         #     cv2.imshow(proj_window_name, utils.img_to_viridis(pm_display))
         # cv2.imshow(cam_window_name, utils.img_to_viridis(show_cam_map))
 
