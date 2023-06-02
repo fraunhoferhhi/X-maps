@@ -102,7 +102,6 @@ class DisparityToDepth:
         with self.stats.measure_time("remap disp"):
             disp = remap(disp_map, self.calib.disp_proj_mapx_i16, self.calib.disp_proj_mapy_i16)
 
-        # get depth map from rectified disparity map and append to list of depth maps
         # NOTE: This depth calculatoin is quick but not correct. It does not take into account the
         # change of depth during the rotation back from the rectified coordinate system to the
         # unrectified coordinate system.
@@ -112,7 +111,6 @@ class DisparityToDepth:
                 self.calib.P2,
             )
 
-        # TODO perf Numba impl?
         with self.stats.measure_time("clip_norm"):
             depth_map_u8 = clip_normalize_uint8_depth_frame(depth_map_f32, min_value=self.z_near, max_value=self.z_far)
 
