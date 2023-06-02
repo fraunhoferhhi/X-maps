@@ -3,7 +3,7 @@ import numba
 import numpy as np
 
 
-@numba.jit(nopython=True, parallel=True, cache=True)
+@numba.jit(nopython=True, parallel=True, cache=True, error_model="numpy")
 def clip_normalize_uint8_depth_frame(depth_frame: np.ndarray, min_value: float, max_value: float) -> np.ndarray:
     """function to clip a depth map to min and max arguments, normalize to [0,255] and change dtype to np.uint8"""
     height, width = depth_frame.shape
@@ -40,7 +40,7 @@ def generate_color_map(norm_frame: np.ndarray) -> None:
     return frame
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True, cache=True)
+@numba.jit(nopython=True, parallel=True, fastmath=True, cache=True, error_model="numpy")
 def disparity_to_depth_rectified(disparity, P1):
     """Function for simplified calculation of depth from disparity.
     This calculation neglects the change in depth caused be the rotation of the rectification.
