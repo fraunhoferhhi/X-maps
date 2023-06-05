@@ -56,7 +56,6 @@ def main():
     parser.add_argument("-proj_height", type=int, default=1920, help="projector pixel height")
     parser.add_argument("-proj_width", type=int, default=1080, help="projector pixel width")
     parser.add_argument("-calib", type=str, default="", help="camera extrinsics parameter yaml file")
-    parser.add_argument("-w", type=int, default=3, help="Window size")
     parser.add_argument("-num_scans", type=int, default=60, help="Number of scans to average over")
     parser.add_argument("-start_scan", type=int, default=0, help="Scan start id")
 

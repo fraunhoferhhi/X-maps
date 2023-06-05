@@ -3,24 +3,23 @@ import cv2
 from dataclasses import dataclass
 
 
-def generate_linear_projector_time_map(projector_shape: tuple, scan_upwards: bool) -> np.ndarray:
+def generate_linear_projector_time_map(proj_width: int, proj_height: int, scan_upwards: bool) -> np.ndarray:
     # x and y coordinates of projector pixels
-    ys, xs = np.mgrid[0 : projector_shape[1], 0 : projector_shape[0]]
+    ys, xs = np.mgrid[0:proj_height, 0:proj_width]
 
     if scan_upwards:
         # invert y axis to scan from bottom to top
         ys = ys[::-1]
 
     # scan in x direction (right) first, than the y direction (determined by scan_upwards)
-    pixel_indeces = xs * projector_shape[1] + ys
+    pixel_indeces = xs * proj_height + ys
 
-    projector_time_map = pixel_indeces / (projector_shape[0] * projector_shape[1])
+    projector_time_map = pixel_indeces / (proj_width * proj_height)
 
     return projector_time_map.astype(np.float32)
 
 
 def remap_proj_time_map(calib, proj_time_map, border_mode) -> np.ndarray:
-    # NOTE: ESL implementation uses BORDER_CONSTANT
     return cv2.remap(
         proj_time_map,
         calib.projector_mapx,
@@ -37,7 +36,7 @@ class ProjectorTimeMap:
     @staticmethod
     def from_calib(calib, scan_upwards=True, remap_border_mode=cv2.BORDER_REPLICATE):
         projector_time_map = generate_linear_projector_time_map(
-            (calib.projector_width, calib.projector_height), scan_upwards
+            calib.projector_width, calib.projector_height, scan_upwards
         )
         projector_time_map_rectified = remap_proj_time_map(calib, projector_time_map, border_mode=remap_border_mode)
         return ProjectorTimeMap(projector_time_map_rectified)
