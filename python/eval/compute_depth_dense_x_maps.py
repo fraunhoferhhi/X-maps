@@ -18,6 +18,7 @@ from esl_utilities import utils as ut
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from x_maps_disparity import XMapsDisparity
+from cam_proj_calibration import CamProjCalibrationParams, CamProjMaps
 from proj_time_map import ProjectorTimeMap
 
 
@@ -94,7 +95,7 @@ def main():
         e3d_setup.proj_int, np.zeros((1, 5)), e3d_setup.R1, e3d_setup.P1, (rect_shape[0], rect_shape[1]), cv2.CV_32FC1
     )
 
-    calib = XMapsCalib(
+    calib__ = XMapsCalib(
         disp_cam_mapx=disp_mapx,
         disp_cam_mapy=disp_mapy,
         Q=e3d_setup.Q,
@@ -104,11 +105,26 @@ def main():
         projector_mapy=proj_mapy,
     )
 
+    cam_width, cam_height = 640, 480
+
+    calib_params = CamProjCalibrationParams.from_ESL_yaml(
+        args.calib, cam_width, cam_height, args.proj_width, args.proj_height
+    )
+
+    cam_proj_maps = CamProjMaps(calib_params)
+
     # by default X-Maps processing we would use scan_upwards=True (as we expect the projector to scan from bottom to top) and BORDER_REPLICATE
     # to compare against ESL results, we use their settings here instead of the generated time map
-    proj_time_map = ProjectorTimeMap.from_calib(calib=calib, scan_upwards=False, remap_border_mode=cv2.BORDER_CONSTANT)
+    proj_time_map = ProjectorTimeMap.from_calib(
+        calib_params=calib_params,
+        cam_proj_maps=cam_proj_maps,
+        scan_upwards=False,
+        remap_border_mode=cv2.BORDER_CONSTANT,
+    )
 
-    x_maps_comp = XMapsDisparity(calib=calib, proj_time_map=proj_time_map, proj_width=args.proj_width)
+    x_maps_comp = XMapsDisparity(
+        calib_params=calib_params, calib_maps=cam_proj_maps, proj_time_map=proj_time_map, proj_width=args.proj_width
+    )
     x_maps_comp.disp_map_shape = (480, 640)
 
     for i in range(args.start_scan, args.start_scan + args.num_scans):

@@ -108,8 +108,9 @@ def optimize_proj_x_map(proj_time_map, T_MAP_SIZE, T_PX_SCALE, X_OFFSET, proj_wi
 
 
 class XMapsDisparity:
-    def __init__(self, calib, proj_time_map, proj_width):
-        self.calib = calib
+    def __init__(self, calib_params, calib_maps, proj_time_map, proj_width):
+        self.calib_params = calib_params
+        self.cam_proj_maps = calib_maps
         self.init_proj_x_map(proj_time_map.projector_time_map_rectified, proj_width)
         self.disp_map_shape = proj_time_map.projector_time_map_rectified.shape
 
@@ -149,7 +150,9 @@ class XMapsDisparity:
 
         # for each event
         # get rectified coordinates
-        xcr_f32, ycr_f32 = rectify_cam_coords(self.calib.disp_cam_mapx, self.calib.disp_cam_mapy, events)
+        xcr_f32, ycr_f32 = rectify_cam_coords(
+            self.cam_proj_maps.disp_cam_mapx, self.cam_proj_maps.disp_cam_mapy, events
+        )
 
         # at time t and rectified y, access yt map
         disp_f32, inlier_mask = compute_disparity(
@@ -167,7 +170,7 @@ class XMapsDisparity:
 
         if compute_point_cloud:
             point_cloud = construct_point_cloud(
-                xcr_f32[inlier_mask] + disp_f32, ycr_f32[inlier_mask], disp_f32, self.calib.Q
+                xcr_f32[inlier_mask] + disp_f32, ycr_f32[inlier_mask], disp_f32, self.cam_proj_maps.Q
             )
 
         if compute_disp_map:

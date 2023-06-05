@@ -6,7 +6,7 @@ from metavision_sdk_ui import BaseWindow, MTWindow, UIAction, UIKeyEvent
 
 from trigger_finder import RobustTriggerFinder
 from stats_printer import StatsPrinter, SingleTimer
-from cam_proj_calibration import CamProjCalibration
+from cam_proj_calibration import CamProjMaps, CamProjCalibrationParams
 from x_maps_disparity import XMapsDisparity
 from proj_time_map import ProjectorTimeMap
 from disp_to_depth import DisparityToDepth
@@ -140,21 +140,22 @@ class DepthReprojectionPipe:
         )
 
         with SingleTimer("Setting up calibration"):
-            calib_obj = CamProjCalibration(
+            calib_params = CamProjCalibrationParams.from_yaml(
                 self.params.calib, self.camera_width, self.camera_height, self.projector_width, self.projector_height
             )
+            calib_maps = CamProjMaps(calib_params)
 
         with SingleTimer("Setting up projector time map"):
             if self.params.projector_time_map is not None:
                 proj_time_map = ProjectorTimeMap.from_file(self.params.projector_time_map)
             else:
-                proj_time_map = ProjectorTimeMap.from_calib(calib_obj)
+                proj_time_map = ProjectorTimeMap.from_calib(calib_params, calib_maps)
 
         with SingleTimer("Setting up projector X-map"):
-            self.x_maps_disp = XMapsDisparity(calib_obj, proj_time_map, self.projector_width)
+            self.x_maps_disp = XMapsDisparity(calib_params, calib_maps, proj_time_map, self.projector_width)
 
         with SingleTimer("Setting up disparity to depth"):
-            self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_obj, self.params.z_near, self.params.z_far)
+            self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_maps, self.params.z_near, self.params.z_far)
 
         if USE_FAKE_WINDOW:
             self.window = FakeWindow()

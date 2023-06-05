@@ -1,6 +1,7 @@
 import cv2
 import numba
 import numpy as np
+from dataclasses import dataclass
 
 
 @numba.jit(nopython=True, parallel=True, cache=True, error_model="numpy")
@@ -62,14 +63,14 @@ def disparity_to_depth_rectified(disparity, P1):
     return depth
 
 
+@dataclass
 class DisparityToDepth:
-    def __init__(self, stats, calib, z_near, z_far):
-        self.stats = stats
-        self.calib = calib
-        self.z_near = z_near
-        self.z_far = z_far
+    stats: "StatsPrinter"
+    calib_maps: "CamProjMaps"
+    z_near: float
+    z_far: float
 
-        self.dilate_kernel = np.ones((7, 7), dtype=np.uint8)
+    dilate_kernel = np.ones((7, 7), dtype=np.uint8)
 
     def compute_depth_map(self, disp_map):
         # if projector view is active, dilate pixels
@@ -86,7 +87,7 @@ class DisparityToDepth:
         with self.stats.measure_time("remap disp"):
             disp = cv2.remap(
                 disp_map,
-                map1=self.calib.disp_proj_mapxy_i16,
+                map1=self.calib_maps.disp_proj_mapxy_i16,
                 map2=None,
                 interpolation=cv2.INTER_NEAREST,
                 borderMode=cv2.BORDER_CONSTANT,
@@ -98,7 +99,7 @@ class DisparityToDepth:
         with self.stats.measure_time("d2d_rect"):
             depth_map_f32 = disparity_to_depth_rectified(
                 disp,
-                self.calib.P2,
+                self.calib_maps.P2,
             )
 
         with self.stats.measure_time("clip_norm"):

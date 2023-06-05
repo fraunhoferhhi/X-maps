@@ -8,18 +8,14 @@ import os
 import yaml
 
 
-def open_calibration_data(calib_data_path: str) -> Optional[dict]:
+def open_calibration_data(calib_data_path: str) -> dict:
     """function to open the calibration.yaml file"""
-    if os.path.exists(calib_data_path):
-        with open(calib_data_path, "r") as file:
-            calibration_data = yaml.safe_load(file)
-        return calibration_data
-    else:
-        print(f"File not found at {calib_data_path}")
-        return None
+    with open(calib_data_path, "r") as file:
+        calibration_data = yaml.safe_load(file)
+    return calibration_data
 
 
-def read_cv_matrix(calibration_data: dict, name: str) -> Optional[np.ndarray]:
+def read_cv_matrix(calibration_data: dict, name: str) -> np.ndarray:
     """function to read an opencv matrix from yaml-dict as written by the calibration application"""
     if (
         name in calibration_data
@@ -30,8 +26,7 @@ def read_cv_matrix(calibration_data: dict, name: str) -> Optional[np.ndarray]:
         rows = calibration_data[name]["rows"]
         return np.array(calibration_data[name]["data"]).reshape(rows, cols)
     else:
-        print(f"Could not find matrix {name} in calibration data")
-        return None
+        raise ValueError(f"Could not read matrix {name} from calibration data")
 
 
 def initUndistortRectifyMapInverse(cameraMatrix, distCoeffs, R, newCameraMatrix, size):
@@ -57,41 +52,138 @@ def map_to_i16(mapx_f32: np.ndarray, mapy_f32: np.ndarray) -> np.ndarray:
 
 
 @dataclass
-class CamProjCalibration:
-    def __init__(self, calibration_yaml_path, camera_width, camera_height, projector_width, projector_height):
-        """initialize all stereo parameters from calibration file"""
+class CamProjCalibrationParams:
+    camera_width: int
+    camera_height: int
 
+    projector_width: int
+    projector_height: int
+
+    rect_image_width: int
+    rect_image_height: int
+
+    camera_K: np.ndarray
+    camera_D: np.ndarray
+
+    projector_K: np.ndarray
+    projector_D: np.ndarray
+
+    R: np.ndarray
+    T: np.ndarray
+
+    F: Optional[np.ndarray]
+
+    @staticmethod
+    def from_yaml(
+        calibration_yaml_path: str, camera_width: int, camera_height: int, projector_width: int, projector_height: int
+    ):
         calibration_data = open_calibration_data(calibration_yaml_path)
 
-        self.camera_width = camera_width
-        self.camera_height = camera_height
-
-        self.projector_width = projector_width
-        self.projector_height = projector_height
-
         # TODO make this parameter configurable, compute from camera and projector resolution?
-        rectification_scale = 2.75
-        self.rect_image_width = round(camera_width * rectification_scale)
-        self.rect_image_height = round(camera_height * rectification_scale)
-
-        self.camera_K = read_cv_matrix(calibration_data, "camera_intrinsic_matrix")
-        self.camera_D = read_cv_matrix(calibration_data, "camera_distortion_coefficients")
-
-        self.projector_K = read_cv_matrix(calibration_data, "projector_intrinsic_matrix")
-        self.projector_D = read_cv_matrix(calibration_data, "projector_distortion_coefficients")
-
-        self.R = read_cv_matrix(calibration_data, "relative_rotation")
-        self.T = read_cv_matrix(calibration_data, "relative_translation")
-
-        if "F" in calibration_data:
-            self.F = read_cv_matrix(calibration_data, "F")
-        else:
-            self.F = read_cv_matrix(calibration_data, "fundamental_matrix")
+        rectification_scale: float = 2.75
 
         # TODO: projector distortion coefficients are currently ignored
-        self.projector_D_backup = self.projector_D.copy()
-        self.projector_D = np.zeros((5,))
+        projector_D = read_cv_matrix(calibration_data, "projector_distortion_coefficients")
+        projector_D_backup = projector_D.copy()
+        projector_D = np.zeros((5,))
 
+        return CamProjCalibrationParams(
+            camera_width=camera_width,
+            camera_height=camera_height,
+            projector_width=projector_width,
+            projector_height=projector_height,
+            # TODO move to init
+            rect_image_width=round(camera_width * rectification_scale),
+            rect_image_height=round(camera_height * rectification_scale),
+            camera_K=read_cv_matrix(calibration_data, "camera_intrinsic_matrix"),
+            camera_D=read_cv_matrix(calibration_data, "camera_distortion_coefficients"),
+            projector_K=read_cv_matrix(calibration_data, "projector_intrinsic_matrix"),
+            projector_D=projector_D,
+            R=read_cv_matrix(calibration_data, "relative_rotation"),
+            T=read_cv_matrix(calibration_data, "relative_translation"),
+            F=read_cv_matrix(calibration_data, "F")
+            if "F" in calibration_data
+            else read_cv_matrix(calibration_data, "fundamental_matrix"),
+        )
+
+    @staticmethod
+    def from_ESL_yaml(
+        calibration_yaml_path: str, camera_width: int, camera_height: int, projector_width: int, projector_height: int
+    ):
+        print("Reading calibration from file: {0}".format(calibration_yaml_path))
+
+        # TODO make this parameter configurable, compute from camera and projector resolution?
+        rectification_scale: float = 2.75
+
+        fs = cv2.FileStorage(calibration_yaml_path, cv2.FILE_STORAGE_READ)
+        cam_int = fs.getNode("cam_K").mat()
+        cam_dist = fs.getNode("cam_kc").mat()
+        proj_int = fs.getNode("proj_K").mat()
+        proj_dist = fs.getNode("proj_kc").mat()
+        cam_proj_rmat = fs.getNode("R").mat()
+        cam_proj_tvec = fs.getNode("T").mat()
+        return CamProjCalibrationParams(
+            camera_width=camera_width,
+            camera_height=camera_height,
+            projector_width=projector_width,
+            projector_height=projector_height,
+            rect_image_width=round(camera_width * rectification_scale),
+            rect_image_height=round(camera_height * rectification_scale),
+            camera_K=cam_int,
+            camera_D=cam_dist,
+            projector_K=proj_int,
+            projector_D=proj_dist,
+            R=cam_proj_rmat,
+            T=cam_proj_tvec,
+            F=None,
+        )
+        # R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
+        #     proj_int,
+        #     proj_dist,
+        #     cam_int,
+        #     cam_dist,
+        #     shape,
+        #     cam_proj_rmat,
+        #     cam_proj_tvec,
+        #     # flags=cv2.CALIB_ZERO_DISPARITY,
+        #     alpha=alpha,
+        # )
+        # T = np.zeros((4, 4), np.float32)
+        # T[:3, :3] = cam_proj_rmat
+        # T[:3, 3] = cam_proj_tvec[:, 0]
+        # # T_inv = np.zeros((4, 4), np.float32)
+        # # T_inv[:3, :3] = cam_proj_rmat.T
+        # # T_inv[:3, 3] = -np.dot(cam_proj_rmat.T, cam_proj_tvec[:, 0])
+        # return calib(cam_int, cam_dist, proj_int, proj_dist, cam_proj_rmat, R1, R2, P1, P2, Q, T)
+
+
+@dataclass
+class CamProjMaps:
+    # TODO move to params
+    R1: np.ndarray
+    R2: np.ndarray
+
+    P1: np.ndarray
+    P2: np.ndarray
+
+    Q: np.ndarray
+
+    # lookup table to easily rectify camera image/time map with cv2.remap
+    camera_mapx: np.ndarray
+    camera_mapy: np.ndarray
+
+    # lookup tables to easily rectify projector image/time map with cv2.remap
+    projector_mapx: np.ndarray
+    projector_mapy: np.ndarray
+
+    # lookup table to easily unrectify camera image/time map with cv2.remap
+    disp_cam_mapx: np.ndarray
+    disp_cam_mapy: np.ndarray
+
+    # lookup table to easily unrectify projector image/time map with cv2.remap
+    disp_proj_mapxy_i16: np.ndarray
+
+    def __init__(self, calib: CamProjCalibrationParams):
         # calculate stereo rectification from camera and projector instrinsics and extrinsics
         (
             self.R1,
@@ -99,67 +191,66 @@ class CamProjCalibration:
             self.P1,
             self.P2,
             self.Q,
-            self.validPixROI1,
-            self.validPixROI2,
+            validPixROI1,
+            validPixROI2,
         ) = cv2.stereoRectify(
-            cameraMatrix1=self.camera_K,
-            distCoeffs1=self.camera_D,
-            cameraMatrix2=self.projector_K,
-            distCoeffs2=self.projector_D,
-            imageSize=(self.rect_image_width, self.rect_image_height),
-            R=self.R,
-            T=self.T,
+            cameraMatrix1=calib.camera_K,
+            distCoeffs1=calib.camera_D,
+            cameraMatrix2=calib.projector_K,
+            distCoeffs2=calib.projector_D,
+            imageSize=(calib.rect_image_width, calib.rect_image_height),
+            R=calib.R,
+            T=calib.T,
             alpha=-1,
         )
 
         # calculate inverse of rectification rotation to be able to project back to unrectified space
-        self.R1_inv = np.linalg.inv(self.R1)
-        self.R2_inv = np.linalg.inv(self.R2)
+        R1_inv = np.linalg.inv(self.R1)
+        R2_inv = np.linalg.inv(self.R2)
 
-        # utils.write_cv_matrix(calibration_data, 'R1', self.R1)
-        # utils.write_cv_matrix(calibration_data, 'P1', self.P1)
-        # utils.write_cv_matrix(calibration_data, 'R2', self.R2)
-        # utils.write_cv_matrix(calibration_data, 'P2', self.P2)
-        # utils.write_cv_matrix(calibration_data, 'Q', self.Q)
-        # utils.write_cv_size(calibration_data, 'rectification_image_size', (self.image_width, self.image_height))
+        # utils.write_cv_matrix(calibration_data, 'R1', R1)
+        # utils.write_cv_matrix(calibration_data, 'P1', P1)
+        # utils.write_cv_matrix(calibration_data, 'R2', R2)
+        # utils.write_cv_matrix(calibration_data, 'P2', P2)
+        # utils.write_cv_matrix(calibration_data, 'Q', Q)
+        # utils.write_cv_size(calibration_data, 'rectification_image_size', (image_width, image_height))
 
-        # calculate lookup table to easily rectify camera image/time map with cv2.remap
+        # TODO why isn't this signed i16?
         self.camera_mapx, self.camera_mapy = cv2.initUndistortRectifyMap(
-            self.camera_K,
-            self.camera_D,
+            calib.camera_K,
+            calib.camera_D,
             self.R1,
             self.P1,
-            (self.rect_image_width, self.rect_image_height),
+            (calib.rect_image_width, calib.rect_image_height),
             cv2.CV_32FC1,
         )
 
-        # calculate lookup table to easily rectify projector image/time map with cv2.remap
+        # TODO why isn't this signed i16?
         self.projector_mapx, self.projector_mapy = cv2.initUndistortRectifyMap(
-            self.projector_K,
-            self.projector_D,
+            calib.projector_K,
+            calib.projector_D,
             self.R2,
             self.P2,
-            (self.rect_image_width, self.rect_image_height),
+            (calib.rect_image_width, calib.rect_image_height),
             cv2.CV_32FC1,
         )
 
-        # calculate lookup table to easily unrectify camera image/time map with cv2.remap
         self.disp_cam_mapx, self.disp_cam_mapy = initUndistortRectifyMapInverse(
-            self.camera_K, self.camera_D, self.R1, self.P1, (self.camera_width, self.camera_height)
+            calib.camera_K, calib.camera_D, self.R1, self.P1, (calib.camera_width, calib.camera_height)
         )
 
         # calculate lookup table to easily calculate undistorted camera image
-        self.disp_cam_mapx_undist, self.disp_cam_mapy_undist = initUndistortRectifyMapInverse(
-            self.camera_K, self.camera_D, np.eye(3), self.camera_K, (self.camera_width, self.camera_height)
+        disp_cam_mapx_undist, disp_cam_mapy_undist = initUndistortRectifyMapInverse(
+            calib.camera_K, calib.camera_D, np.eye(3), calib.camera_K, (calib.camera_width, calib.camera_height)
         )
 
         # calculate lookup table to easily unrectify projector image/time map with cv2.remap
-        self.disp_proj_mapx, self.disp_proj_mapy = initUndistortRectifyMapInverse(
-            self.projector_K,
-            self.projector_D,
+        disp_proj_mapx, disp_proj_mapy = initUndistortRectifyMapInverse(
+            calib.projector_K,
+            calib.projector_D,
             self.R2,
             self.P2,
-            (self.projector_width, self.projector_height),
+            (calib.projector_width, calib.projector_height),
         )
 
-        self.disp_proj_mapxy_i16 = map_to_i16(self.disp_proj_mapx, self.disp_proj_mapy)
+        self.disp_proj_mapxy_i16 = map_to_i16(disp_proj_mapx, disp_proj_mapy)

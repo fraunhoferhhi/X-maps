@@ -19,11 +19,11 @@ def generate_linear_projector_time_map(proj_width: int, proj_height: int, scan_u
     return projector_time_map.astype(np.float32)
 
 
-def remap_proj_time_map(calib, proj_time_map, border_mode) -> np.ndarray:
+def remap_proj_time_map(cam_proj_maps, proj_time_map, border_mode) -> np.ndarray:
     return cv2.remap(
         proj_time_map,
-        calib.projector_mapx,
-        calib.projector_mapy,
+        cam_proj_maps.projector_mapx,
+        cam_proj_maps.projector_mapy,
         cv2.INTER_NEAREST,
         border_mode,
     )
@@ -34,11 +34,13 @@ class ProjectorTimeMap:
     projector_time_map_rectified: np.ndarray
 
     @staticmethod
-    def from_calib(calib, scan_upwards=True, remap_border_mode=cv2.BORDER_REPLICATE):
+    def from_calib(calib_params, cam_proj_maps, scan_upwards=True, remap_border_mode=cv2.BORDER_REPLICATE):
         projector_time_map = generate_linear_projector_time_map(
-            calib.projector_width, calib.projector_height, scan_upwards
+            calib_params.projector_width, calib_params.projector_height, scan_upwards
         )
-        projector_time_map_rectified = remap_proj_time_map(calib, projector_time_map, border_mode=remap_border_mode)
+        projector_time_map_rectified = remap_proj_time_map(
+            cam_proj_maps, projector_time_map, border_mode=remap_border_mode
+        )
         return ProjectorTimeMap(projector_time_map_rectified)
 
     @staticmethod
