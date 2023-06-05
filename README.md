@@ -109,7 +109,7 @@ The parameters you can use when running the `depth_reprojection.py` script can b
 
 ### Compute evaluation on static ESL data
 
-As there is no dataset providing ground truth depth, we chose to check the correctness of X-Maps depth estimation by comparing it to the results of the init step of ESL, which performs a disparity search in time maps. The following steps describe how to download the ESL time maps, process them with the MC3D implementation of ESL, ESL init, and finally X-Maps. After all steps are completed, Table 1 of the paper will be printed.
+As there is no dataset providing ground truth depth, we chose to check the correctness of X-Maps depth estimation by comparing it to the results of ESL, which performs a disparity search in time maps followed by an lengthy point-wise optimization. The following steps describe how to download the ESL time maps, process them with the MC3D implementation of ESL, ESL init, and finally X-Maps. After all steps are completed, Table 1 of the paper will be printed.
 
 1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`.
 2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data` in the container.

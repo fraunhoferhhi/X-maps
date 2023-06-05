@@ -145,7 +145,10 @@ class DepthReprojectionPipe:
             )
 
         with SingleTimer("Setting up projector time map"):
-            proj_time_map = ProjectorTimeMap(calib_obj, self.params.projector_time_map)
+            if self.params.projector_time_map is not None:
+                proj_time_map = ProjectorTimeMap.from_file(self.params.projector_time_map)
+            else:
+                proj_time_map = ProjectorTimeMap.from_calib(calib_obj)
 
         with SingleTimer("Setting up projector X-map"):
             self.x_maps_disp = XMapsDisparity(calib_obj, proj_time_map, self.projector_width)
