@@ -65,16 +65,13 @@ def main():
     rect_shape = (int(args.proj_width * 3), int(args.proj_height * 3))
 
     x_maps_dir = os.path.join(args.object_dir, "x_maps")
-    if not os.path.isdir(x_maps_dir):
-        os.mkdir(x_maps_dir)
+    os.makedirs(x_maps_dir, exist_ok=True)
 
     depth_dir = os.path.join(x_maps_dir, "depth_init")
-    if not os.path.isdir(depth_dir):
-        os.mkdir(depth_dir)
+    os.makedirs(depth_dir, exist_ok=True)
 
     pointcloud_dir = os.path.join(x_maps_dir, "pointcloud_init")
-    if not os.path.isdir(pointcloud_dir):
-        os.mkdir(pointcloud_dir)
+    os.makedirs(pointcloud_dir, exist_ok=True)
 
     e3d_setup = ut.loadCalibParams(args.calib, (rect_shape[0], rect_shape[1]), alpha=-1)
     cam_image_names = sorted(glob.glob(args.object_dir + "scans_np/*.npy"))
