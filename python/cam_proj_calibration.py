@@ -68,10 +68,10 @@ class CamProjCalibrationParams:
     projector_K: np.ndarray
     projector_D: np.ndarray
 
-    R: np.ndarray
-    T: np.ndarray
+    cam2proj_R: np.ndarray
+    cam2proj_T: np.ndarray
 
-    F: Optional[np.ndarray]
+    F: Optional[np.ndarray] = None
 
     @staticmethod
     def from_yaml(
@@ -99,8 +99,8 @@ class CamProjCalibrationParams:
             camera_D=read_cv_matrix(calibration_data, "camera_distortion_coefficients"),
             projector_K=read_cv_matrix(calibration_data, "projector_intrinsic_matrix"),
             projector_D=projector_D,
-            R=read_cv_matrix(calibration_data, "relative_rotation"),
-            T=read_cv_matrix(calibration_data, "relative_translation"),
+            cam2proj_R=read_cv_matrix(calibration_data, "relative_rotation"),
+            cam2proj_T=read_cv_matrix(calibration_data, "relative_translation"),
             F=read_cv_matrix(calibration_data, "F")
             if "F" in calibration_data
             else read_cv_matrix(calibration_data, "fundamental_matrix"),
@@ -122,6 +122,7 @@ class CamProjCalibrationParams:
         proj_dist = fs.getNode("proj_kc").mat()
         cam_proj_rmat = fs.getNode("R").mat()
         cam_proj_tvec = fs.getNode("T").mat()
+
         return CamProjCalibrationParams(
             camera_width=camera_width,
             camera_height=camera_height,
@@ -133,9 +134,8 @@ class CamProjCalibrationParams:
             camera_D=cam_dist,
             projector_K=proj_int,
             projector_D=proj_dist,
-            R=cam_proj_rmat,
-            T=cam_proj_tvec,
-            F=None,
+            cam2proj_R=cam_proj_rmat,
+            cam2proj_T=cam_proj_tvec,
         )
         # R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
         #     proj_int,
