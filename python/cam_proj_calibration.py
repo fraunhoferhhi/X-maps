@@ -113,7 +113,7 @@ class CamProjCalibrationParams:
         print("Reading calibration from file: {0}".format(calibration_yaml_path))
 
         # TODO make this parameter configurable, compute from camera and projector resolution?
-        rectification_scale: float = 2.75
+        rectification_scale: float = 3
 
         fs = cv2.FileStorage(calibration_yaml_path, cv2.FILE_STORAGE_READ)
         cam_int = fs.getNode("cam_K").mat()
@@ -128,8 +128,8 @@ class CamProjCalibrationParams:
             camera_height=camera_height,
             projector_width=projector_width,
             projector_height=projector_height,
-            rect_image_width=round(camera_width * rectification_scale),
-            rect_image_height=round(camera_height * rectification_scale),
+            rect_image_width=round(projector_width * rectification_scale),
+            rect_image_height=round(projector_height * rectification_scale),
             camera_K=cam_int,
             camera_D=cam_dist,
             projector_K=proj_int,
@@ -137,24 +137,6 @@ class CamProjCalibrationParams:
             cam2proj_R=cam_proj_rmat,
             cam2proj_T=cam_proj_tvec,
         )
-        # R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
-        #     proj_int,
-        #     proj_dist,
-        #     cam_int,
-        #     cam_dist,
-        #     shape,
-        #     cam_proj_rmat,
-        #     cam_proj_tvec,
-        #     # flags=cv2.CALIB_ZERO_DISPARITY,
-        #     alpha=alpha,
-        # )
-        # T = np.zeros((4, 4), np.float32)
-        # T[:3, :3] = cam_proj_rmat
-        # T[:3, 3] = cam_proj_tvec[:, 0]
-        # # T_inv = np.zeros((4, 4), np.float32)
-        # # T_inv[:3, :3] = cam_proj_rmat.T
-        # # T_inv[:3, 3] = -np.dot(cam_proj_rmat.T, cam_proj_tvec[:, 0])
-        # return calib(cam_int, cam_dist, proj_int, proj_dist, cam_proj_rmat, R1, R2, P1, P2, Q, T)
 
 
 @dataclass
@@ -183,7 +165,24 @@ class CamProjMaps:
     # lookup table to easily unrectify projector image/time map with cv2.remap
     disp_proj_mapxy_i16: np.ndarray
 
-    def __init__(self, calib: CamProjCalibrationParams):
+    def __init__(
+        self, calib: CamProjCalibrationParams, cam_is_first_cam: bool = True, zero_undistort_proj_map: bool = False
+    ):
+        if cam_is_first_cam:
+            rectify_params = {
+                "cameraMatrix1": calib.camera_K,
+                "distCoeffs1": calib.camera_D,
+                "cameraMatrix2": calib.projector_K,
+                "distCoeffs2": calib.projector_D,
+            }
+        else:
+            rectify_params = {
+                "cameraMatrix1": calib.projector_K,
+                "distCoeffs1": calib.projector_D,
+                "cameraMatrix2": calib.camera_K,
+                "distCoeffs2": calib.camera_D,
+            }
+
         # calculate stereo rectification from camera and projector instrinsics and extrinsics
         (
             self.R1,
@@ -194,14 +193,11 @@ class CamProjMaps:
             validPixROI1,
             validPixROI2,
         ) = cv2.stereoRectify(
-            cameraMatrix1=calib.camera_K,
-            distCoeffs1=calib.camera_D,
-            cameraMatrix2=calib.projector_K,
-            distCoeffs2=calib.projector_D,
             imageSize=(calib.rect_image_width, calib.rect_image_height),
-            R=calib.R,
-            T=calib.T,
+            R=calib.cam2proj_R,
+            T=calib.cam2proj_T,
             alpha=-1,
+            **rectify_params,
         )
 
         # calculate inverse of rectification rotation to be able to project back to unrectified space
@@ -226,9 +222,11 @@ class CamProjMaps:
         )
 
         # TODO why isn't this signed i16?
+        proj_dist = np.zeros(5) if zero_undistort_proj_map else calib.projector_D
+
         self.projector_mapx, self.projector_mapy = cv2.initUndistortRectifyMap(
             calib.projector_K,
-            calib.projector_D,
+            proj_dist,
             self.R2,
             self.P2,
             (calib.rect_image_width, calib.rect_image_height),

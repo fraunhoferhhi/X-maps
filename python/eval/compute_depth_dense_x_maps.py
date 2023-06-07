@@ -5,14 +5,10 @@ import os.path
 import sys
 import time
 
-from dataclasses import dataclass
-
 import cv2
 import numpy as np
 import pandas as pd
 from pyntcloud import PyntCloud
-
-from esl_utilities import utils as ut
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -20,31 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from x_maps_disparity import XMapsDisparity
 from cam_proj_calibration import CamProjCalibrationParams, CamProjMaps
 from proj_time_map import ProjectorTimeMap
-
-
-@dataclass
-class XMapsCalib:
-    disp_cam_mapx: np.ndarray
-    disp_cam_mapy: np.ndarray
-    Q: np.ndarray
-    projector_width: int
-    projector_height: int
-    projector_mapx: np.ndarray
-    projector_mapy: np.ndarray
-
-
-def initUndistortRectifyMapInverse(cameraMatrix, distCoeffs, R, newCameraMatrix, size, m1type):
-    W, H = size
-    coords = np.stack(np.meshgrid(np.arange(W), np.arange(H))).reshape((2, -1)).T.reshape((-1, 1, 2)).astype("float32")
-    points = cv2.undistortPoints(coords, cameraMatrix, distCoeffs, None, R, newCameraMatrix)
-    maps = points.reshape((H, W, 2))
-    return maps[..., 0], maps[..., 1]
-
-
-def disparity_to_depth_rectified(disparity, P1):
-    depth = P1[0, 3] / disparity
-    depth[disparity == 0] = 0.0
-    return depth
+from disp_to_depth import disparity_to_depth_rectified
 
 
 def main():
@@ -61,8 +33,6 @@ def main():
     parser.add_argument("-start_scan", type=int, default=0, help="Scan start id")
 
     args = parser.parse_args()
-    proj_shape = (args.proj_width, args.proj_height)
-    rect_shape = (int(args.proj_width * 3), int(args.proj_height * 3))
 
     x_maps_dir = os.path.join(args.object_dir, "x_maps")
     os.makedirs(x_maps_dir, exist_ok=True)
@@ -73,7 +43,6 @@ def main():
     pointcloud_dir = os.path.join(x_maps_dir, "pointcloud_init")
     os.makedirs(pointcloud_dir, exist_ok=True)
 
-    e3d_setup = ut.loadCalibParams(args.calib, (rect_shape[0], rect_shape[1]), alpha=-1)
     cam_image_names = sorted(glob.glob(args.object_dir + "scans_np/*.npy"))
     if len(cam_image_names) == 0:
         print("No camera files found in " + str(args.object_dir + "scans_np/") + "!")
@@ -82,36 +51,18 @@ def main():
     print("Found {0} scans!".format(len(cam_image_names)))
     print()
 
-    # remap rectified view to image plane view
-    disp_mapx, disp_mapy = initUndistortRectifyMapInverse(
-        e3d_setup.cam_int, e3d_setup.cam_dist, e3d_setup.R0, e3d_setup.P0, (640, 480), None
-    )
-
-    # remap image plane to rectified plane
-    proj_mapx, proj_mapy = cv2.initUndistortRectifyMap(
-        e3d_setup.proj_int, np.zeros((1, 5)), e3d_setup.R1, e3d_setup.P1, (rect_shape[0], rect_shape[1]), cv2.CV_32FC1
-    )
-
-    calib__ = XMapsCalib(
-        disp_cam_mapx=disp_mapx,
-        disp_cam_mapy=disp_mapy,
-        Q=e3d_setup.Q,
+    calib_params = CamProjCalibrationParams.from_ESL_yaml(
+        args.calib,
+        camera_width=640,
+        camera_height=480,
         projector_width=args.proj_width,
         projector_height=args.proj_height,
-        projector_mapx=proj_mapx,
-        projector_mapy=proj_mapy,
     )
 
-    cam_width, cam_height = 640, 480
+    # special modes to mirror the ESL implementation for undistort map creation
+    cam_proj_maps = CamProjMaps(calib_params, cam_is_first_cam=False, zero_undistort_proj_map=True)
 
-    calib_params = CamProjCalibrationParams.from_ESL_yaml(
-        args.calib, cam_width, cam_height, args.proj_width, args.proj_height
-    )
-
-    cam_proj_maps = CamProjMaps(calib_params)
-
-    # by default X-Maps processing we would use scan_upwards=True (as we expect the projector to scan from bottom to top) and BORDER_REPLICATE
-    # to compare against ESL results, we use their settings here instead of the generated time map
+    # special modes to mirror the ESL implementation for the projector time map
     proj_time_map = ProjectorTimeMap.from_calib(
         calib_params=calib_params,
         cam_proj_maps=cam_proj_maps,
@@ -153,7 +104,7 @@ def main():
 
             print("Completed disparity estimation: " + str(i) + " in time " + str(time.time() - start))
 
-            depth_init = disparity_to_depth_rectified(disparity, e3d_setup.P1)
+            depth_init = disparity_to_depth_rectified(disparity, cam_proj_maps.P2)
 
             np.save(os.path.join(depth_dir, "scans" + str(i).zfill(3) + ".npy"), depth_init)
 
