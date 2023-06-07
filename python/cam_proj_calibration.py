@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import cv2
-import os
 import yaml
 
 
@@ -150,25 +149,39 @@ class CamProjMaps:
 
     Q: np.ndarray
 
-    # lookup table to easily rectify camera image/time map with cv2.remap
+    # lookup table to rectify camera image/time map with cv2.remap
     camera_mapx: np.ndarray
     camera_mapy: np.ndarray
 
-    # lookup tables to easily rectify projector image/time map with cv2.remap
+    # lookup tables to rectify projector image/time map with cv2.remap
     projector_mapx: np.ndarray
     projector_mapy: np.ndarray
 
-    # lookup table to easily unrectify camera image/time map with cv2.remap
+    # lookup table to unrectify camera image/time map with cv2.remap
     disp_cam_mapx: np.ndarray
     disp_cam_mapy: np.ndarray
 
-    # lookup table to easily unrectify projector image/time map with cv2.remap
+    # lookup table to unrectify projector image/time map with cv2.remap
     disp_proj_mapxy_i16: np.ndarray
 
     def __init__(
-        self, calib: CamProjCalibrationParams, cam_is_first_cam: bool = True, zero_undistort_proj_map: bool = False
+        self, calib: CamProjCalibrationParams, cam_is_left: bool = True, zero_undistort_proj_map: bool = False
     ):
-        if cam_is_first_cam:
+        """Provide maps to map camera and projector images to rectified images and vice versa.
+
+        Default params are used in X-maps.
+
+        Invert the bool params to mirror ESL processing.
+
+        Args:
+            calib: calibration parameters
+            cam_is_first_cam: True if camera is first camera in stereo pair, False if projector is first camera for cv2.stereoRectify
+            zero_undistort_proj_map: True if projector distortion should be ignored in projector rectification map
+        """
+
+        # TODO make cam_is_left default for X-maps
+        # order has a very small effect on the resulting rectification
+        if cam_is_left:
             rectify_params = {
                 "cameraMatrix1": calib.camera_K,
                 "distCoeffs1": calib.camera_D,
@@ -201,17 +214,10 @@ class CamProjMaps:
         )
 
         # calculate inverse of rectification rotation to be able to project back to unrectified space
-        R1_inv = np.linalg.inv(self.R1)
-        R2_inv = np.linalg.inv(self.R2)
+        # R1_inv = np.linalg.inv(self.R1)
+        # R2_inv = np.linalg.inv(self.R2)
 
-        # utils.write_cv_matrix(calibration_data, 'R1', R1)
-        # utils.write_cv_matrix(calibration_data, 'P1', P1)
-        # utils.write_cv_matrix(calibration_data, 'R2', R2)
-        # utils.write_cv_matrix(calibration_data, 'P2', P2)
-        # utils.write_cv_matrix(calibration_data, 'Q', Q)
-        # utils.write_cv_size(calibration_data, 'rectification_image_size', (image_width, image_height))
-
-        # TODO why isn't this signed i16?
+        # TODO perf: why isn't this signed i16?
         self.camera_mapx, self.camera_mapy = cv2.initUndistortRectifyMap(
             calib.camera_K,
             calib.camera_D,
@@ -221,9 +227,10 @@ class CamProjMaps:
             cv2.CV_32FC1,
         )
 
-        # TODO why isn't this signed i16?
+        # ESL compatibility: projector distortion is ignored here, but still used in cv2.stereoRectify
         proj_dist = np.zeros(5) if zero_undistort_proj_map else calib.projector_D
 
+        # TODO perf: why isn't this signed i16?
         self.projector_mapx, self.projector_mapy = cv2.initUndistortRectifyMap(
             calib.projector_K,
             proj_dist,
@@ -237,12 +244,12 @@ class CamProjMaps:
             calib.camera_K, calib.camera_D, self.R1, self.P1, (calib.camera_width, calib.camera_height)
         )
 
-        # calculate lookup table to easily calculate undistorted camera image
-        disp_cam_mapx_undist, disp_cam_mapy_undist = initUndistortRectifyMapInverse(
-            calib.camera_K, calib.camera_D, np.eye(3), calib.camera_K, (calib.camera_width, calib.camera_height)
-        )
+        # calculate lookup table to calculate undistorted camera image
+        # disp_cam_mapx_undist, disp_cam_mapy_undist = initUndistortRectifyMapInverse(
+        #     calib.camera_K, calib.camera_D, np.eye(3), calib.camera_K, (calib.camera_width, calib.camera_height)
+        # )
 
-        # calculate lookup table to easily unrectify projector image/time map with cv2.remap
+        # calculate lookup table to unrectify projector image/time map with cv2.remap
         disp_proj_mapx, disp_proj_mapy = initUndistortRectifyMapInverse(
             calib.projector_K,
             calib.projector_D,
