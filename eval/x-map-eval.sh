@@ -63,10 +63,10 @@ do
     if [ $compute_xmaps = true ]; then
         # don't run in parallel, setup takes a bit, but frame computation is very fast
         echo "Running X-maps..."
-        python3 python/eval/compute_depth_dense_x_maps.py -object_dir ${seq_folder} -num_scans ${num_scans} -calib ${calib_yaml} > /dev/null 2>&1
+        python3 python/eval/compute_depth_x_maps.py -object_dir ${seq_folder} -num_scans ${num_scans} -calib ${calib_yaml} > /dev/null 2>&1
     fi
 
 done
 
 echo "Running evaluation script to compare results..."
-python3 python/eval/esl_evaluation.py -object_dir ${static_folder} -max_depth 500
+python3 python/eval/create_evaluation_table.py -object_dir ${static_folder} -max_depth 500
