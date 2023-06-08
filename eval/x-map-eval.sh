@@ -8,7 +8,7 @@ set -euo pipefail
 
 # may want to disable these, once computed, to avoid lengthy recomputations
 compute_mc3d=true
-compute_esl=false
+compute_esl=true
 
 compute_xmaps=true
 
@@ -54,10 +54,10 @@ do
     
     if [ $compute_esl = true ]; then
         echo "Running ESL in parallel..."
-        seq 0 $((num_scans-1)) | parallel --no-notice --bar --eta "python3 python/esl/compute_depth.py -object_dir '${seq_folder}' -num_scans 1 -calib ${calib_yaml}  -start_scan {}  > /dev/null 2>&1"
+        seq 0 $((num_scans-1)) | parallel --no-notice --bar --eta "python3 python/eval/compute_depth_esl.py -object_dir '${seq_folder}' -num_scans 1 -calib ${calib_yaml}  -start_scan {}  > /dev/null 2>&1"
 
         # if the parallel work is not producing outputs, check manually:
-        # python3 python/esl/compute_depth.py -object_dir ${seq_folder} -num_scans ${num_scans} -calib ${calib_yaml}
+        # python3 python/eval/compute_depth_esl.py -object_dir ${seq_folder} -num_scans ${num_scans} -calib ${calib_yaml}
     fi
 
     if [ $compute_xmaps = true ]; then
