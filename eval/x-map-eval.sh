@@ -46,10 +46,10 @@ do
 
     if [ $compute_mc3d = true ]; then
         echo "Running MC3D baseline in parallel..."
-        seq 0 $((num_scans-1)) | parallel --no-notice --bar --eta "python3 python/esl/mc3d_baseline.py -object_dir '${seq_folder}' -num_scans 1 -calib ${calib_yaml} -start_scan {} > /dev/null 2>&1"
+        seq 0 $((num_scans-1)) | parallel --no-notice --bar --eta "python3 python/eval/mc3d_baseline.py -object_dir '${seq_folder}' -num_scans 1 -calib ${calib_yaml} -start_scan {} > /dev/null 2>&1"
 
         # if the silent parallel work is not producing outputs, check manually:
-        # python3 python/esl/mc3d_baseline.py -object_dir ${seq_folder} -num_scans ${num_scans} -calib ${calib_yaml}
+        # python3 python/eval/mc3d_baseline.py -object_dir ${seq_folder} -num_scans ${num_scans} -calib ${calib_yaml}
     fi
     
     if [ $compute_esl = true ]; then
