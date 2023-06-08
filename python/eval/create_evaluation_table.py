@@ -1,11 +1,8 @@
 # file adapted from https://github.com/uzh-rpg/ESL/blob/734bf8e88f689db79a0b291b1fb30839c6dd4130/python/evaluation.py
 
 import numpy as np
-import cv2
 import os
 from esl_utilities import utils as ut
-import pandas as pd
-from pyntcloud import PyntCloud
 
 import argparse
 import glob
@@ -48,7 +45,6 @@ class evaluation_stats:
         self.calculate_fillrate()
         self.calculate_rmse()
         self.middlebury_metrics()
-        return 0
 
     def print_metrics(self):
         print("Fill rate: " + str(self.fillrate))
@@ -56,66 +52,6 @@ class evaluation_stats:
         print("% Pixels with error greater than 1cm: " + str(self.perc_1))
         print("% Pixels with error greater than 5cm: " + str(self.perc_5))
         print("% Pixels with error greater than 10cm: " + str(self.perc_10))
-
-
-def clip_depth_img(depth_img: np.ndarray, min_value: float, max_value: float):
-    """function to clip frame to min and max arguments"""
-    # as 0 depth represents no depth value, zeros must be preserved
-    # get a boolean map of all zeros
-    if min_value > 0:
-        bool_map = depth_img == 0
-    # clip values
-    np.clip(depth_img, a_min=min_value, a_max=max_value, out=depth_img)
-    # reset zeros according to boolean map
-    if min_value > 0:
-        depth_img[bool_map] = 0
-    return depth_img
-
-
-def construct_point_cloud(xpr_f32, ypr_f32, disp_f32, Q):
-    points = np.ones((len(xpr_f32), 4), dtype=np.float32)
-    # points = np.stack((xpr_dispf, ypr_dispf, 1)).T
-    points[:, 0] = xpr_f32
-    points[:, 1] = ypr_f32
-    points[:, 2] = -disp_f32
-    point_cloud = (Q.astype(np.float32) @ points.T).T
-    point_cloud = (point_cloud / point_cloud[:, 3:])[:, :3]
-
-    # invert y and z axis
-    point_cloud[:, 1] = -point_cloud[:, 1]
-    point_cloud[:, 2] = -point_cloud[:, 2]
-
-    return point_cloud
-
-
-def get_pointcloud(frame, e3d_setup, min_depth, max_depth):
-    frame[frame < min_depth] = 0
-    frame[frame > max_depth] = 0
-
-    event_y = np.argwhere(frame > 0)[:, 0]
-    event_x = np.argwhere(frame > 0)[:, 1]
-    event_depth = frame[frame > 0]
-
-    coords = np.stack((event_x, event_y)).T.astype(np.float32)
-
-    xypr_f32_filt = cv2.undistortPoints(coords, e3d_setup.cam_int, e3d_setup.cam_dist, R=e3d_setup.R0, P=e3d_setup.P0)
-
-    xpr_f32 = xypr_f32_filt[:, 0, 0]
-    ypr_f32 = xypr_f32_filt[:, 0, 1]
-    disp = e3d_setup.P1[0, 3] / event_depth
-
-    point_cloud = construct_point_cloud(xpr_f32, ypr_f32, disp, e3d_setup.Q)
-    # still some t offset
-    # point_cloud += e3d_setup.T[:3, 3]
-    # print(e3d_setup.T[:3, 3])
-    cloud = PyntCloud(
-        pd.DataFrame(
-            # same arguments that you are passing to visualize_pcl
-            data=point_cloud,
-            columns=["x", "y", "z"],
-        )
-    )
-    return cloud
 
 
 def load_and_filter(filename, gt, min_depth, max_depth):
@@ -198,24 +134,6 @@ def main():
             print("Something is wrong with the data. Frames are missing")
             print(f"gt_files: {len(gt_files)}\t x_maps_files: {len(x_maps_files)}\t mc3d_files: {len(mc3d_files)}")
             exit()
-
-        # if args.calib is not "" and args.out_dir is not "":
-        #     if not os.path.isdir(args.out_dir):
-        #         os.mkdir(args.out_dir)
-        #     proj_shape = (args.proj_width, args.proj_height)
-        #     rect_shape = (int(args.proj_width * 3), int(args.proj_height * 3))
-        #     e3d_setup = ut.loadCalibParams(args.calib, (rect_shape[0], rect_shape[1]), alpha=-1)
-
-        #     esl = np.load(gt_files[0])
-
-        #     cloud_test = get_pointcloud(esl, e3d_setup, min_depth, max_depth)
-        #     cloud_gt = get_pointcloud(gt_combined, e3d_setup, min_depth, max_depth)
-
-        #     cloud_test.to_file(os.path.join(args.out_dir, "eval_poincloud.ply"))
-        #     cloud_gt.to_file(os.path.join(args.out_dir, "gt_poincloud.ply"))
-
-        # plt.imshow(gt_combined, "jet")
-        # plt.show()
 
         avg_mc3d = []
         avg_mc3d_1s = []
