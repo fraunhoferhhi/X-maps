@@ -19,7 +19,7 @@ dependencies:
   # - opend3d
   - pandas
   # - pip
-  # - pylops==1.18.3
+  - pylops==1.18.3
   - py-spy
   - pyntcloud
   - pyyaml
