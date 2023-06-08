@@ -1,18 +1,15 @@
 # Implementation of the baseline MC3D
-# coding: UTF-8
+# from https://github.com/uzh-rpg/ESL/blob/734bf8e88f689db79a0b291b1fb30839c6dd4130/python/mc3d_baseline.py
+
 import os
 import time
-import json
 import glob
 import os.path
 import argparse
 import numpy as np
 import cv2
-from matplotlib import cm
-from matplotlib import pyplot as plt
 
-from utils.utilities import calib
-from utils.utilities import utils as ut
+from esl_utilities import utils as ut
 
 
 def disparity_to_depth(disparity, P1):

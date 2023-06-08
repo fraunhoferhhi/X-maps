@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # may want to disable these, once computed, to avoid lengthy recomputations
-compute_mc3d=false
+compute_mc3d=true
 compute_esl=false
 
 compute_xmaps=true
