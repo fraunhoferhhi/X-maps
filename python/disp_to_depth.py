@@ -72,7 +72,7 @@ class DisparityToDepth:
 
     dilate_kernel = np.ones((7, 7), dtype=np.uint8)
 
-    def compute_depth_map(self, disp_map):
+    def remap_rectified_disp_map_to_proj(self, rectified_disp_map):
         # if projector view is active, dilate pixels
         # projector view is the depth maps from the projectors perspective and with the projectors resolution.
         # Two problems, first, the resolution of the depth map is lower than the projector resolution.
@@ -82,7 +82,7 @@ class DisparityToDepth:
 
         # TODO perf this gets faster with a larger kernel.. why?
         with self.stats.measure_time("dilate"):
-            disp_map = cv2.dilate(disp_map, self.dilate_kernel)
+            disp_map = cv2.dilate(rectified_disp_map, self.dilate_kernel)
 
         with self.stats.measure_time("remap disp"):
             disp = cv2.remap(
@@ -93,12 +93,15 @@ class DisparityToDepth:
                 borderMode=cv2.BORDER_CONSTANT,
             )
 
+        return disp
+
+    def colorize_depth_from_disp(self, disp_map: np.ndarray) -> np.ndarray:
         # NOTE: This depth calculatoin is quick but not correct. It does not take into account the
         # change of depth during the rotation back from the rectified coordinate system to the
         # unrectified coordinate system.
         with self.stats.measure_time("d2d_rect"):
             depth_map_f32 = disparity_to_depth_rectified(
-                disp,
+                disp_map,
                 self.calib_maps.P2,
             )
 

@@ -54,6 +54,11 @@ def project_events(bias, input, params, delta_t, pipe):
 @click.option(
     "--no-frame-dropping", help="Process all events, even when processing lags behind the event stream", is_flag=True
 )
+@click.option(
+    "--camera-perspective",
+    help="By default the depth is rendered from the projector's perspectiev. Enable this flag to render from the camera perspective instead.",
+    is_flag=True,
+)
 def main(bias, input, loop_input, **cli_params):
     # TODO remove these static values, retrieve from event stream
     params = RuntimeParams(camera_width=640, camera_height=480, **cli_params)

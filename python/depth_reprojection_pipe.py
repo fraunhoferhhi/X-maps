@@ -60,6 +60,8 @@ class RuntimeParams:
 
     no_frame_dropping: bool
 
+    camera_perspective: bool
+
     @property
     def should_drop_frames(self):
         return not self.no_frame_dropping
@@ -121,10 +123,18 @@ class DepthReprojectionPipe:
         # window.show_async(frame)
 
         with self.stats_printer.measure_time("x-maps disp"):
-            point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(evs)
+            point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(
+                evs,
+                projector_view=not self.params.camera_perspective,
+                rectified_view=not self.params.camera_perspective,
+            )
 
-        with self.stats_printer.measure_time("disp2depth"):
-            depth_map = self.disp_to_depth.compute_depth_map(disp_map)
+        if not self.params.camera_perspective:
+            with self.stats_printer.measure_time("remap disp"):
+                disp_map = self.disp_to_depth.remap_rectified_disp_map_to_proj(disp_map)
+
+        with self.stats_printer.measure_time("disp2rgb"):
+            depth_map = self.disp_to_depth.colorize_depth_from_disp(disp_map)
 
         self.window.show_async(depth_map)
         self.stats_printer.count("frames shown")
@@ -162,8 +172,8 @@ class DepthReprojectionPipe:
         else:
             self.window = MTWindow(
                 title="X Maps Depth",
-                width=self.projector_width,
-                height=self.projector_height,
+                width=self.camera_width if self.params.camera_perspective else self.projector_width,
+                height=self.camera_height if self.params.camera_perspective else self.projector_height,
                 mode=BaseWindow.RenderMode.BGR,
                 open_directly=True,
             )

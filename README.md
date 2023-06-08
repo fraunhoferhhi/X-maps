@@ -106,6 +106,9 @@ The parameters you can use when running the `depth_reprojection.py` script can b
 | `--bias`  | Specifies the path to the bias file. This is only required for live camera usage. |
 | `--input`  | Specifies the path to either a .raw, .dat file for prerecorded sessions. Leave this parameter out for live capture. |
 | `--no-frame-dropping` | By default, events are dropped when the processing is too slow. Use this parameter to disable frame dropping, and process all incoming events. |
+| `--loop-input` | After events from RAW input file are exhausted, start playing from beginning again, forever. |
+| `--camera-perspective` | By default the depth is rendered from the projector's perspectiev. Enable this flag to render from the camera perspective instead. |
+
 
 ### Compute evaluation on static ESL data
 

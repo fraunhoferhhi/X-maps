@@ -174,8 +174,6 @@ class XMapsDisparity:
             )
 
         if compute_disp_map:
-            disp_map = np.zeros(self.disp_map_shape, dtype=np.float32)
-
             # ypr_dispf = np.rint(ypr_f32[inlier_mask]).astype(np.int16)
             # xpr_dispf = np.rint(xpr_f32[inlier_mask]).astype(np.int16)
 
@@ -194,14 +192,19 @@ class XMapsDisparity:
                     return point_cloud, None
 
                 xpr_i16 = np.rint(xcr_f32[inlier_mask] + disp_f32).astype(np.int16)
+                disp_map = np.zeros(self.disp_map_shape, dtype=np.float32)
                 disp_map[ycr_i16, xpr_i16] = disp_f32
             else:
                 if rectified_view:
                     xcr_i16 = np.rint(xcr_f32[inlier_mask]).astype(np.int16)
+                    disp_map = np.zeros(self.disp_map_shape, dtype=np.float32)
                     disp_map[ycr_i16, xcr_i16] = disp_f32
                 else:
                     x_cam = events["x"][inlier_mask]
                     y_cam = events["y"][inlier_mask]
+                    disp_map = np.zeros(
+                        (self.calib_params.camera_height, self.calib_params.camera_width), dtype=np.float32
+                    )
                     disp_map[y_cam, x_cam] = disp_f32
 
         # dump_frame_data(

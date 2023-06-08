@@ -73,7 +73,6 @@ def main():
     x_maps_comp = XMapsDisparity(
         calib_params=calib_params, calib_maps=cam_proj_maps, proj_time_map=proj_time_map, proj_width=args.proj_width
     )
-    x_maps_comp.disp_map_shape = (480, 640)
 
     for i in range(args.start_scan, args.start_scan + args.num_scans):
         print("Processing frame: {0}, camera npy file {1}".format(str(i), cam_image_names[i]))
