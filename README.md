@@ -117,7 +117,24 @@ As there is no dataset providing ground truth depth, we chose to check the corre
 4. Terminal &rarr; Run Task... &rarr; *Run X-maps evaluation script*.
 
 
-<!-- ## Technical details -->
+## Technical details
+
+### Calibration
+
+Using OpenCV coordinate system and OpenCV camera calibration parameters read from a YAML file. Unit is cm.
+
+### Differences to ESL
+
+| What | X-Maps | ESL |
+| ------------- | ------------- | ------------- |
+| Projector scan direction | y (fast): bottom to top, x (slow): left to right | y (fast): bottom to top, x (slow): left to right |
+| Projector distortion | Ignored | Used for stereo rectification, ignored in projector remapping |
+| Time map rectification border handling | cv2.BORDER_REPLICATE | cv2.BORDER_CONSTANT |
+| Rectified size | 2.75 * camera size | 3 * projector size |
+
+The X-Maps column lists the default for the depth reprojection script. The ESL column lists the default for the ESL implementation. For comparison against esl_init in the evaluation, the ESL assumptions are used when processing with X-Maps.
+
+
 
 <!-- USAGE EXAMPLES -->
 <!-- ## Usage
