@@ -110,22 +110,27 @@ class XMapsDisparity:
         projector_view=True,
         rectified_view=True,
     ):
-        # for each event
-        # get rectified coordinates
-        xcr_f32, ycr_f32 = rectify_cam_coords(
+        # get rectified event coordinates
+        ev_x_rect_f32, ev_y_rect_f32 = rectify_cam_coords(
             self.cam_proj_maps.disp_cam_mapx, self.cam_proj_maps.disp_cam_mapy, events
         )
 
-        # at time t and rectified y, access yt map
-        disp_f32, inlier_mask = compute_disparity(
-            xcr_f32, ycr_f32, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
+        # at time t and rectified y, access X-map
+        # note: ev_disparity_f32 may be shorter original events list
+        # because some events may lie outside the projector X-map.
+        # events[inlier_mask] can be used to trim the original events list
+        ev_disparity_f32, inlier_mask = compute_disparity(
+            ev_x_rect_f32, ev_y_rect_f32, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
         )
 
         point_cloud, disp_map = None, None
 
         if compute_point_cloud:
             point_cloud = construct_point_cloud(
-                xcr_f32[inlier_mask] + disp_f32, ycr_f32[inlier_mask], disp_f32, self.cam_proj_maps.Q
+                ev_x_rect_f32[inlier_mask] + ev_disparity_f32,
+                ev_y_rect_f32[inlier_mask],
+                ev_disparity_f32,
+                self.cam_proj_maps.Q,
             )
 
         if compute_disp_map:
@@ -137,7 +142,7 @@ class XMapsDisparity:
 
             # TODO + 0.5?
             if rectified_view:
-                ycr_i16 = np.rint(ycr_f32[inlier_mask]).astype(np.int16)
+                ycr_i16 = np.rint(ev_y_rect_f32[inlier_mask]).astype(np.int16)
 
             # TODO should one of the disparities actually be negative, assuption: no, since then the baseline also must be negative and it would cancel out ? (N.G.)
             # TODO instead of using the rounded rectified coordinates, be could also use the input event coordinates
@@ -146,21 +151,21 @@ class XMapsDisparity:
                     print("Projector view not implemented. Return rectified view")
                     return point_cloud, None
 
-                xpr_i16 = np.rint(xcr_f32[inlier_mask] + disp_f32).astype(np.int16)
+                xpr_i16 = np.rint(ev_x_rect_f32[inlier_mask] + ev_disparity_f32).astype(np.int16)
                 disp_map = np.zeros(self.disp_map_shape, dtype=np.float32)
-                disp_map[ycr_i16, xpr_i16] = disp_f32
+                disp_map[ycr_i16, xpr_i16] = ev_disparity_f32
             else:
                 if rectified_view:
-                    xcr_i16 = np.rint(xcr_f32[inlier_mask]).astype(np.int16)
+                    xcr_i16 = np.rint(ev_x_rect_f32[inlier_mask]).astype(np.int16)
                     disp_map = np.zeros(self.disp_map_shape, dtype=np.float32)
-                    disp_map[ycr_i16, xcr_i16] = disp_f32
+                    disp_map[ycr_i16, xcr_i16] = ev_disparity_f32
                 else:
                     x_cam = events["x"][inlier_mask]
                     y_cam = events["y"][inlier_mask]
                     disp_map = np.zeros(
                         (self.calib_params.camera_height, self.calib_params.camera_width), dtype=np.float32
                     )
-                    disp_map[y_cam, x_cam] = disp_f32
+                    disp_map[y_cam, x_cam] = ev_disparity_f32
 
         # dump_frame_data(
         #     events,
