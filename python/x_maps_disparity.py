@@ -1,7 +1,10 @@
 import numba
 import numpy as np
 
+from dataclasses import dataclass, field, InitVar
+
 from x_map import compute_x_map_from_time_map
+from cam_proj_calibration import CamProjCalibrationParams, CamProjMaps
 
 from epipolar_disparity import (
     rectify_cam_coords,
@@ -62,14 +65,17 @@ def compute_disparity(xcr_f32, ycr_f32, t, proj_x_map, T_PX_SCALE, X_OFFSET):
     return disp[disp_inlier_mask], y_inlier_mask
 
 
+@dataclass
 class XMapsDisparity:
-    def __init__(self, calib_params, calib_maps, proj_time_map, proj_width):
-        self.calib_params = calib_params
-        self.cam_proj_maps = calib_maps
-        self.init_proj_x_map(proj_time_map.projector_time_map_rectified, proj_width)
-        self.disp_map_shape = proj_time_map.projector_time_map_rectified.shape
+    calib_params: CamProjCalibrationParams
+    cam_proj_maps: CamProjMaps
 
-    def init_proj_x_map(self, proj_time_map, proj_width):
+    proj_time_map_rect: InitVar[np.ndarray]
+
+    proj_x_map: np.ndarray = field(init=False)
+    disp_map_shape: tuple = field(init=False)
+
+    def __post_init__(self, proj_time_map_rect):
         """Setup the projector X-map for disparity lookup"""
 
         # we want to differentiate between x=0 and x undefined
@@ -77,22 +83,24 @@ class XMapsDisparity:
         self.X_OFFSET = 4242
 
         # using 16 bit for indices, make sure we don't overflow
-        assert proj_time_map.shape[0] <= 2**15 - 1
-        assert proj_time_map.shape[1] + self.X_OFFSET <= 2**15 - 1
+        assert proj_time_map_rect.shape[0] <= 2**15 - 1
+        assert proj_time_map_rect.shape[1] + self.X_OFFSET <= 2**15 - 1
 
         # the time axis can be freely discretized
         # we choose the projector width as the number of time steps
         # which should allow different scan lines to map to different time columns
-        self.X_MAP_WIDTH = proj_width
+        self.X_MAP_WIDTH = self.calib_params.projector_width
         self.T_PX_SCALE = self.X_MAP_WIDTH - 1
 
         self.proj_x_map, t_diffs = compute_x_map_from_time_map(
-            time_map=proj_time_map,
+            time_map=proj_time_map_rect,
             x_map_width=self.X_MAP_WIDTH,
             t_px_scale=self.T_PX_SCALE,
             X_OFFSET=self.X_OFFSET,
-            num_scanlines=proj_width,
+            num_scanlines=self.calib_params.projector_width,
         )
+
+        self.disp_map_shape = proj_time_map_rect.shape
 
     def compute_event_disparity(
         self,

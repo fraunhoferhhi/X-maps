@@ -57,7 +57,11 @@ class DepthReprojectionPipe:
                 proj_time_map = ProjectorTimeMap.from_calib(calib_params, calib_maps)
 
         with SingleTimer("Setting up projector X-map"):
-            x_maps_disp = XMapsDisparity(calib_params, calib_maps, proj_time_map, params.projector_width)
+            x_maps_disp = XMapsDisparity(
+                calib_params=calib_params,
+                cam_proj_maps=calib_maps,
+                proj_time_map_rect=proj_time_map.projector_time_map_rectified,
+            )
 
         with SingleTimer("Setting up disparity to depth"):
             disp_to_depth = DisparityToDepth(stats_printer, calib_maps, params.z_near, params.z_far)
