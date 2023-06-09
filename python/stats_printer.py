@@ -177,6 +177,9 @@ class StatsPrinter:
     def toggle_silence(self):
         self.should_print = not self.should_print
 
+    def start_time_ns(self) -> int:
+        return self.global_stats.start_time_ns
+
     def reset(self):
         self.local_stats.reset()
         self.global_stats.reset()

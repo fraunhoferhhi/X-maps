@@ -10,8 +10,8 @@ from cam_proj_calibration import CamProjMaps, CamProjCalibrationParams
 from x_maps_disparity import XMapsDisparity
 from proj_time_map import ProjectorTimeMap
 from disp_to_depth import DisparityToDepth
+from timing_watchdog import TimingWatchdog
 
-import time
 from dataclasses import dataclass, field
 
 USE_FAKE_WINDOW = False
@@ -71,9 +71,6 @@ class RuntimeParams:
 class DepthReprojectionPipe:
     params: RuntimeParams
 
-    first_event_time_us: int = -1
-    start_time: int = -1
-
     _pool = Pool()
 
     pos_filter = PolarityFilterAlgorithm(1)
@@ -89,6 +86,8 @@ class DepthReprojectionPipe:
     x_maps_disp: XMapsDisparity = None
     disp_to_depth: DisparityToDepth = None
     stats_printer: StatsPrinter = StatsPrinter()
+
+    watchdog: TimingWatchdog = None
 
     @property
     def camera_width(self):
@@ -144,6 +143,8 @@ class DepthReprojectionPipe:
 
         self.pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
         # self.act_events_buf = ActivityNoiseFilterAlgorithm.get_empty_output_buffer()
+
+        self.watchdog = TimingWatchdog(stats_printer=self.stats_printer, projector_fps=self.projector_fps)
 
         self.trigger_finder = RobustTriggerFinder(
             projector_fps=self.projector_fps, stats=self.stats_printer, callback=self.on_frame_evs, pool=self._pool
@@ -201,20 +202,7 @@ Available keyboard shortcuts:
             self.stats_printer.toggle_silence()
 
     def process_events(self, evs):
-        if self.first_event_time_us == -1:
-            self.first_event_time_us = evs["t"][0]
-            self.start_time = time.perf_counter_ns()
-            self.stats_printer.reset()
-
-        ev_time_diff_ns = (evs["t"][0] - self.first_event_time_us) * 1000
-        proc_time_diff_ns = time.perf_counter_ns() - self.start_time
-        proc_behind = proc_time_diff_ns - ev_time_diff_ns
-
-        self.stats_printer.add_time_measure_ns("(cpu t - ev[0] t)", proc_behind)
-
-        frames_behind_i = int(proc_behind / (1000 * 1000 * 1000 / self.projector_fps))
-        self.stats_printer.add_metric("frames behind", frames_behind_i)
-        if frames_behind_i > 0 and self.params.should_drop_frames:
+        if self.watchdog.is_processing_behind(evs) and self.params.should_drop_frames:
             self.trigger_finder.drop_frame()
 
         self.stats_printer.print_stats_if_needed()
@@ -230,6 +218,5 @@ Available keyboard shortcuts:
         self.stats_printer.print_stats_if_needed()
 
     def reset(self):
-        self.first_event_time_us = -1
-        self.start_time = -1
+        self.watchdog.reset()
         self.trigger_finder.reset()
