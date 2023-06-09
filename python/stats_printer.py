@@ -3,6 +3,11 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 import time
 from typing import Any, Callable, ClassVar, Dict, Optional
+import shutil
+
+
+def max_cols():
+    return shutil.get_terminal_size(fallback=(160, 40)).columns
 
 
 def human_readable_time(elapsed_ns):
@@ -44,16 +49,32 @@ class Occurences:
         self.occurences[name] += qty
 
     def print_total(self):
-        print("total count ", end="")
+        lines = 1
+        str = "total count "
         for name, occ in sorted(self.occurences.items()):
-            print(f"#{name}: {human_readable_qty(occ)} | ", end="")
-        print()
+            append = f"#{name}: {human_readable_qty(occ)} | "
+            if len(str + append) > max_cols():
+                print(str)
+                str = "           "
+                lines += 1
+            str += append
+
+        print(str)
+        return lines
 
     def print_avg(self, elapsed_ns):
-        print("avg per sec ", end="")
+        str = "avg per sec "
+        lines = 1
         for name, occ in sorted(self.occurences.items()):
-            print(f"#{name}: {human_readable_qty_per_second(occ, elapsed_ns)} | ", end="")
-        print()
+            append = f"#{name}: {human_readable_qty_per_second(occ, elapsed_ns)} | "
+            if len(str + append) > max_cols():
+                print(str)
+                str = "             "
+                lines += 1
+            str += append
+
+        print(str)
+        return lines
 
     def reset(self):
         for name in self.occurences.keys():
@@ -74,11 +95,20 @@ class Quantities:
         self.qty_counter.count(name)
 
     def print_avg(self):
-        print("avg ", end="")
+        str = "avg "
+        lines = 1
         for name, qty in sorted(self.qties.items()):
             count = max(self.qty_counter[name], 1)
-            print(f"{name}: {self.fmt(qty / count)} | ", end="")
-        print()
+            append = f"{name}: {self.fmt(qty / count)} | "
+
+            if len(str + append) > max_cols():
+                print(str)
+                str = "    "
+                lines += 1
+
+            str += append
+        print(str)
+        return lines
 
     def reset(self):
         for name in self.qties.keys():
@@ -112,16 +142,16 @@ class Stats:
         return time.perf_counter_ns() - self.start_time_ns
 
     def print_total_occurrences(self):
-        self.occurences.print_total()
+        return self.occurences.print_total()
 
     def print_avg_occurrences(self, elapsed_ns):
-        self.occurences.print_avg(elapsed_ns)
+        return self.occurences.print_avg(elapsed_ns)
 
     def print_avg_qties(self):
-        self.qties.print_avg()
+        return self.qties.print_avg()
 
     def print_avg_time_measures(self):
-        self.time_measures.print_avg()
+        return self.time_measures.print_avg()
 
     def reset(self):
         self.occurences.reset()
@@ -145,6 +175,8 @@ class StatsPrinter:
     have_printed: bool = False
 
     should_print: bool = True
+
+    printed_lines: int = 0
 
     local_stats: Stats = Stats()
     global_stats: Stats = Stats()
@@ -190,9 +222,11 @@ class StatsPrinter:
 
         if self.have_printed:
             # Move cursor up by 11 lines
-            print("\033[11A", end="")
+            print(f"\033[{self.printed_lines}A", end="")
             # Clear the screen from cursor to end
             print("\033[J", end="")
+
+        self.printed_lines = 0
 
         red = "\033[31m"
         green = "\033[32m"
@@ -209,26 +243,33 @@ class StatsPrinter:
             end="",
         )
         print(f"{global_avg_color}global stats over {human_readable_time(self.global_stats.elapsed_ns())}")
+        self.printed_lines += 1
 
         print()
+        self.printed_lines += 1
+
         print(f"{local_avg_color}", end="")
-        self.local_stats.print_avg_occurrences(self.local_stats.elapsed_ns())
+        self.printed_lines += self.local_stats.print_avg_occurrences(self.local_stats.elapsed_ns())
         print(f"{global_avg_color}", end="")
-        self.global_stats.print_avg_occurrences(self.global_stats.elapsed_ns())
+        self.printed_lines += self.global_stats.print_avg_occurrences(self.global_stats.elapsed_ns())
         print(f"{global_tot_color}", end="")
-        self.global_stats.print_total_occurrences()
+        self.printed_lines += self.global_stats.print_total_occurrences()
 
         print()
+        self.printed_lines += 1
+
         print(f"{local_avg_color}", end="")
-        self.local_stats.print_avg_qties()
+        self.printed_lines += self.local_stats.print_avg_qties()
         print(f"{global_avg_color}", end="")
-        self.global_stats.print_avg_qties()
+        self.printed_lines += self.global_stats.print_avg_qties()
 
         print()
+        self.printed_lines += 1
+
         print(f"{local_avg_color}", end="")
-        self.local_stats.print_avg_time_measures()
+        self.printed_lines += self.local_stats.print_avg_time_measures()
         print(f"{global_avg_color}", end="")
-        self.global_stats.print_avg_time_measures()
+        self.printed_lines += self.global_stats.print_avg_time_measures()
 
         self.local_stats.reset()
 
