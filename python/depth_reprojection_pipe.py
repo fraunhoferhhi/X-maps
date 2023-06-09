@@ -30,6 +30,8 @@ class DepthReprojectionPipe:
     pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
     # act_events_buf = None
 
+    calib_maps: CamProjMaps = field(init=False)
+
     trigger_finder: RobustTriggerFinder = field(init=False)
 
     ev_filter_proc = FrameEventFilterProcessor()
@@ -54,23 +56,25 @@ class DepthReprojectionPipe:
                 self.params.projector_width,
                 self.params.projector_height,
             )
-            calib_maps = CamProjMaps(calib_params)
+            self.calib_maps = CamProjMaps(calib_params)
 
         with SingleTimer("Setting up projector time map"):
             if self.params.projector_time_map is not None:
                 proj_time_map = ProjectorTimeMap.from_file(self.params.projector_time_map)
             else:
-                proj_time_map = ProjectorTimeMap.from_calib(calib_params, calib_maps)
+                proj_time_map = ProjectorTimeMap.from_calib(calib_params, self.calib_maps)
 
         with SingleTimer("Setting up projector X-map"):
             self.x_maps_disp = XMapsDisparity(
                 calib_params=calib_params,
-                cam_proj_maps=calib_maps,
+                cam_proj_maps=self.calib_maps,
                 proj_time_map_rect=proj_time_map.projector_time_map_rectified,
             )
 
         with SingleTimer("Setting up disparity to depth"):
-            self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_maps, self.params.z_near, self.params.z_far)
+            self.disp_to_depth = DisparityToDepth(
+                self.stats_printer, self.calib_maps, self.params.z_near, self.params.z_far
+            )
 
         self.trigger_finder = RobustTriggerFinder(
             projector_fps=self.params.projector_fps,
@@ -102,9 +106,15 @@ class DepthReprojectionPipe:
             evs = self.ev_filter_proc.filter_events(evs)
             self.stats_printer.add_metric("frame evs filtered out [%]", 100 - len(evs) / num_events * 100)
 
+        with self.stats_printer.measure_time("ev rectification"):
+            # get rectified event coordinates
+            ev_x_rect_f32, ev_y_rect_f32 = self.calib_maps.rectify_cam_coords(evs)
+
         with self.stats_printer.measure_time("x-maps disp"):
             point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(
-                evs,
+                events=evs,
+                ev_x_rect_f32=ev_x_rect_f32,
+                ev_y_rect_f32=ev_y_rect_f32,
                 projector_view=not self.params.camera_perspective,
                 rectified_view=not self.params.camera_perspective,
             )

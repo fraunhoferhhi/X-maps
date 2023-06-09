@@ -257,3 +257,10 @@ class CamProjMaps:
         )
 
         self.disp_proj_mapxy_i16 = map_to_i16(disp_proj_mapx, disp_proj_mapy)
+
+    def rectify_cam_coords(self, events):
+        # rectified camera coordinates
+        xcr_f32 = self.disp_cam_mapx[events["y"], events["x"]]
+        ycr_f32 = self.disp_cam_mapy[events["y"], events["x"]]
+
+        return xcr_f32, ycr_f32

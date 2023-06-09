@@ -130,15 +130,6 @@ def compute_disparity(
 
 
 @benchmark
-def rectify_cam_coords(disp_cam_mapx, disp_cam_mapy, events):
-    # rectified camera coordinates
-    xcr_f32 = disp_cam_mapx[events["y"], events["x"]]
-    ycr_f32 = disp_cam_mapy[events["y"], events["x"]]
-
-    return xcr_f32, ycr_f32
-
-
-@benchmark
 # @njit # performs worse
 def construct_point_cloud(xpr_f32, ypr_f32, disp_f32, Q):
     points = np.ones((len(xpr_f32), 4), dtype=np.float32)

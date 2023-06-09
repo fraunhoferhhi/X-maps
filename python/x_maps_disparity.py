@@ -7,7 +7,6 @@ from x_map import compute_x_map_from_time_map
 from cam_proj_calibration import CamProjCalibrationParams, CamProjMaps
 
 from epipolar_disparity import (
-    rectify_cam_coords,
     construct_point_cloud,
 )
 
@@ -105,16 +104,13 @@ class XMapsDisparity:
     def compute_event_disparity(
         self,
         events,
+        ev_x_rect_f32,
+        ev_y_rect_f32,
         compute_point_cloud=False,
         compute_disp_map=True,
         projector_view=True,
         rectified_view=True,
     ):
-        # get rectified event coordinates
-        ev_x_rect_f32, ev_y_rect_f32 = rectify_cam_coords(
-            self.cam_proj_maps.disp_cam_mapx, self.cam_proj_maps.disp_cam_mapy, events
-        )
-
         # at time t and rectified y, access X-map
         # note: ev_disparity_f32 may be shorter original events list
         # because some events may lie outside the projector X-map.
