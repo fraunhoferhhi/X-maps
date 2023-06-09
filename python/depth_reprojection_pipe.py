@@ -98,7 +98,9 @@ class DepthReprojectionPipe:
         # window.show_async(frame)
 
         with self.stats_printer.measure_time("frame ev filter"):
+            num_events = len(evs)
             evs = self.ev_filter_proc.filter_events(evs)
+            self.stats_printer.add_metric("frame evs filtered out [%]", 100 - len(evs) / num_events * 100)
 
         with self.stats_printer.measure_time("x-maps disp"):
             point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(
