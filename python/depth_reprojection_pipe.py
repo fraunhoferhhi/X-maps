@@ -118,7 +118,7 @@ class DepthReprojectionPipe:
 
     def select_next_frame_event_filter(self):
         new_filter = self.ev_filter_proc.select_next_filter()
-        print(f"Selected event filter: {new_filter}")
+        self.stats_printer.log(f"Selected event filter: {new_filter}")
 
     def reset(self):
         self.watchdog.reset()

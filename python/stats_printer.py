@@ -206,6 +206,19 @@ class StatsPrinter:
         if self.local_stats.elapsed_ns() >= self.print_every_ms * 1e6:
             self.print_stats()
 
+    def clear_printed_lines(self):
+        if self.have_printed and self.printed_lines > 0:
+            # Move cursor up by 11 lines
+            print(f"\033[{self.printed_lines}A", end="")
+            # Clear the screen from cursor to end
+            print("\033[J", end="")
+
+        self.printed_lines = 0
+
+    def log(self, msg):
+        self.clear_printed_lines()
+        print(msg)
+
     def toggle_silence(self):
         self.should_print = not self.should_print
 
@@ -220,13 +233,7 @@ class StatsPrinter:
         if not self.should_print:
             return
 
-        if self.have_printed:
-            # Move cursor up by 11 lines
-            print(f"\033[{self.printed_lines}A", end="")
-            # Clear the screen from cursor to end
-            print("\033[J", end="")
-
-        self.printed_lines = 0
+        self.clear_printed_lines()
 
         red = "\033[31m"
         green = "\033[32m"
