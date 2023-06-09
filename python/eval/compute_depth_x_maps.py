@@ -71,7 +71,9 @@ def main():
     )
 
     x_maps_comp = XMapsDisparity(
-        calib_params=calib_params, calib_maps=cam_proj_maps, proj_time_map=proj_time_map, proj_width=args.proj_width
+        calib_params=calib_params,
+        cam_proj_maps=cam_proj_maps,
+        proj_time_map_rect=proj_time_map.projector_time_map_rectified,
     )
 
     for i in range(args.start_scan, args.start_scan + args.num_scans):

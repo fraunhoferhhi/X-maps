@@ -53,7 +53,7 @@ class DepthReprojectionProcessor:
 
     stats_printer: StatsPrinter = StatsPrinter()
 
-    _pipe: Optional[DepthReprojectionPipe] = None
+    _pipe: DepthReprojectionPipe = field(init=False)
     _window: BaseWindow = field(init=False)
 
     def should_close(self):
@@ -64,7 +64,7 @@ class DepthReprojectionProcessor:
         self.stats_printer.count("frames shown")
 
     def __enter__(self):
-        self._pipe = DepthReprojectionPipe.create(
+        self._pipe = DepthReprojectionPipe(
             params=self.params, stats_printer=self.stats_printer, frame_callback=self.show_async
         )
 

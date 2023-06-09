@@ -12,91 +12,82 @@ from disp_to_depth import DisparityToDepth
 from timing_watchdog import TimingWatchdog
 from event_buf_pool import EventBufPool
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class DepthReprojectionPipe:
     params: "RuntimeParams"
-
     stats_printer: StatsPrinter
-
     frame_callback: Callable
 
-    _pos_filter = PolarityFilterAlgorithm(1)
+    pos_filter = PolarityFilterAlgorithm(1)
 
     # TODO revisit: does this have an effect on latency?
-    _act_filter: ActivityNoiseFilterAlgorithm
+    act_filter: ActivityNoiseFilterAlgorithm = field(init=False)
 
-    _pos_events_buf: Any
+    pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
     # act_events_buf = None
 
-    _trigger_finder: RobustTriggerFinder
+    trigger_finder: RobustTriggerFinder = field(init=False)
 
-    _x_maps_disp: XMapsDisparity
-    _disp_to_depth: DisparityToDepth
+    x_maps_disp: XMapsDisparity = field(init=False)
+    disp_to_depth: DisparityToDepth = field(init=False)
 
-    _watchdog: TimingWatchdog
+    watchdog: TimingWatchdog = field(init=False)
 
-    _pool: EventBufPool
+    pool = EventBufPool()
 
-    @staticmethod
-    def create(params: "RuntimeParams", stats_printer: StatsPrinter, frame_callback: Callable):
-        pool = EventBufPool()
+    def __post_init__(self):
+        self.act_filter = ActivityNoiseFilterAlgorithm(
+            self.params.camera_width, self.params.camera_height, int(1e6 / self.params.projector_fps)
+        )
 
         with SingleTimer("Setting up calibration"):
             calib_params = CamProjCalibrationParams.from_yaml(
-                params.calib, params.camera_width, params.camera_height, params.projector_width, params.projector_height
+                self.params.calib,
+                self.params.camera_width,
+                self.params.camera_height,
+                self.params.projector_width,
+                self.params.projector_height,
             )
             calib_maps = CamProjMaps(calib_params)
 
         with SingleTimer("Setting up projector time map"):
-            if params.projector_time_map is not None:
-                proj_time_map = ProjectorTimeMap.from_file(params.projector_time_map)
+            if self.params.projector_time_map is not None:
+                proj_time_map = ProjectorTimeMap.from_file(self.params.projector_time_map)
             else:
                 proj_time_map = ProjectorTimeMap.from_calib(calib_params, calib_maps)
 
         with SingleTimer("Setting up projector X-map"):
-            x_maps_disp = XMapsDisparity(
+            self.x_maps_disp = XMapsDisparity(
                 calib_params=calib_params,
                 cam_proj_maps=calib_maps,
                 proj_time_map_rect=proj_time_map.projector_time_map_rectified,
             )
 
         with SingleTimer("Setting up disparity to depth"):
-            disp_to_depth = DisparityToDepth(stats_printer, calib_maps, params.z_near, params.z_far)
+            self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_maps, self.params.z_near, self.params.z_far)
 
-        trigger_finder = RobustTriggerFinder(projector_fps=params.projector_fps, stats=stats_printer, pool=pool)
-
-        pipe = DepthReprojectionPipe(
-            params=params,
-            stats_printer=stats_printer,
-            frame_callback=frame_callback,
-            _act_filter=ActivityNoiseFilterAlgorithm(
-                params.camera_width, params.camera_height, int(1e6 / params.projector_fps)
-            ),
-            _pos_events_buf=PolarityFilterAlgorithm.get_empty_output_buffer(),
-            _trigger_finder=trigger_finder,
-            _x_maps_disp=x_maps_disp,
-            _disp_to_depth=disp_to_depth,
-            _watchdog=TimingWatchdog(stats_printer=stats_printer, projector_fps=params.projector_fps),
-            _pool=pool,
+        self.trigger_finder = RobustTriggerFinder(
+            projector_fps=self.params.projector_fps,
+            stats=self.stats_printer,
+            pool=self.pool,
+            frame_callback=self.process_ev_frame,
         )
 
-        trigger_finder.register_callback(pipe.process_ev_frame)
-
-        return pipe
+        self.watchdog = TimingWatchdog(stats_printer=self.stats_printer, projector_fps=self.params.projector_fps)
 
     def process_events(self, evs):
-        if self._watchdog.is_processing_behind(evs) and self.params.should_drop_frames:
-            self._trigger_finder.drop_frame()
+        if self.watchdog.is_processing_behind(evs) and self.params.should_drop_frames:
+            self.trigger_finder.drop_frame()
 
-        self._pos_filter.process_events(evs, self._pos_events_buf)
+        self.pos_filter.process_events(evs, self.pos_events_buf)
 
-        act_out_buf = self._pool.get_buf()
-        self._act_filter.process_events(self._pos_events_buf, act_out_buf)
+        act_out_buf = self.pool.get_buf()
+        self.act_filter.process_events(self.pos_events_buf, act_out_buf)
 
-        self._trigger_finder.process_events(act_out_buf)
+        self.trigger_finder.process_events(act_out_buf)
 
     def process_ev_frame(self, evs):
         """Callback from the trigger finder, evs contain the events of the current frame"""
@@ -104,7 +95,7 @@ class DepthReprojectionPipe:
         # window.show_async(frame)
 
         with self.stats_printer.measure_time("x-maps disp"):
-            point_cloud, disp_map = self._x_maps_disp.compute_event_disparity(
+            point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(
                 evs,
                 projector_view=not self.params.camera_perspective,
                 rectified_view=not self.params.camera_perspective,
@@ -112,13 +103,13 @@ class DepthReprojectionPipe:
 
         if not self.params.camera_perspective:
             with self.stats_printer.measure_time("remap disp"):
-                disp_map = self._disp_to_depth.remap_rectified_disp_map_to_proj(disp_map)
+                disp_map = self.disp_to_depth.remap_rectified_disp_map_to_proj(disp_map)
 
         with self.stats_printer.measure_time("disp2rgb"):
-            depth_map = self._disp_to_depth.colorize_depth_from_disp(disp_map)
+            depth_map = self.disp_to_depth.colorize_depth_from_disp(disp_map)
 
         self.frame_callback(depth_map)
 
     def reset(self):
-        self._watchdog.reset()
-        self._trigger_finder.reset()
+        self.watchdog.reset()
+        self.trigger_finder.reset()

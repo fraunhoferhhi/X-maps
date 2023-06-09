@@ -92,16 +92,15 @@ class EventBufferList:
 class RobustTriggerFinder:
     projector_fps: int
     stats: StatsPrinter
+    frame_callback: Callable[[np.ndarray], None]
     pool: "Pool"
-
-    callback: Callable[[np.ndarray], None] = lambda evs: None
 
     frame_paused_thresh_us = 40
     should_drop = False
 
     last_frame_start_us = -1
 
-    _ev_buf: Optional[EventBufferList] = None
+    _ev_buf: EventBufferList = field(init=False)
 
     def __post_init__(self):
         self._ev_buf = EventBufferList(self.pool)
@@ -170,7 +169,7 @@ class RobustTriggerFinder:
                 if diff_t_event_pauses <= 1e6 / self.projector_fps and next_idx - prev_idx > MIN_EVENTS_PER_FRAME:
                     # TODO reexamine the +2 and -2
                     # The interval is trimmed a a little to ensure that the events are in the frame.
-                    self.callback(evs[prev_idx + 2 : next_idx - 2])
+                    self.frame_callback(evs[prev_idx + 2 : next_idx - 2])
 
                     start_time = evs["t"][prev_idx + 2]
                     end_time = evs["t"][next_idx - 2]
@@ -188,6 +187,3 @@ class RobustTriggerFinder:
                     return -1
 
         return -1
-
-    def register_callback(self, callback):
-        self.callback = callback
