@@ -1,4 +1,3 @@
-import numba
 import numpy as np
 
 from dataclasses import dataclass, field, InitVar
@@ -7,13 +6,9 @@ from x_map import compute_x_map_from_time_map
 from cam_proj_calibration import CamProjCalibrationParams, CamProjMaps
 
 
-def compute_disparity(xcr_f32, ycr_f32, t, proj_x_map, T_PX_SCALE, X_OFFSET):
+def compute_disparity(xcr_i16, ycr_i16, t, proj_x_map, T_PX_SCALE, X_OFFSET):
     # TODO perf are xcr_f32 and ycr_f32 ever used as floats?
     # otherwise directly look up the int16's
-
-    # rectified rounded event coordinates
-    xcr_i16 = np.rint(xcr_f32).astype(np.int16)
-    ycr_i16 = np.rint(ycr_f32).astype(np.int16)
 
     # events may not be completely sorted by time if
     # they were processed in a filter that averages over coordinates
@@ -28,7 +23,7 @@ def compute_disparity(xcr_f32, ycr_f32, t, proj_x_map, T_PX_SCALE, X_OFFSET):
 
     # spurious events create from scene movement or noise may lie outside the projector X-map
     # these events will be filtered out
-    y_inlier_mask = (ycr_f32 >= 0) & (ycr_f32 < proj_x_map.shape[0] - 1)
+    y_inlier_mask = (ycr_i16 >= 0) & (ycr_i16 < proj_x_map.shape[0] - 1)
 
     # TODO use cv2.remap to retrieve with interpolation from proj_x_map
     # TODO subpixel + 0.5
@@ -82,11 +77,15 @@ class XMapsDisparity:
         ev_x_rect_f32,
         ev_y_rect_f32,
     ):
+        # rectified rounded event coordinates
+        xcr_i16 = np.rint(ev_x_rect_f32).astype(np.int16)
+        ycr_i16 = np.rint(ev_y_rect_f32).astype(np.int16)
+
         # at time t and rectified y, access X-map
         # note: ev_disparity_f32 may be shorter original events list
         # because some events may lie outside the projector X-map.
         # events[inlier_mask] can be used to trim the original events list
         ev_disparity_f32, inlier_mask = compute_disparity(
-            ev_x_rect_f32, ev_y_rect_f32, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
+            xcr_i16, ycr_i16, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
         )
         return ev_disparity_f32, inlier_mask
