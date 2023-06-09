@@ -105,12 +105,10 @@ class XMapsDisparity:
     def compute_event_disparity(
         self,
         events,
-        proj_window_name=None,
         compute_point_cloud=False,
         compute_disp_map=True,
         projector_view=True,
         rectified_view=True,
-        PRECOMP_RECT=False,
     ):
         # events = mean_first_last_event_per_xy(events)
         # events = first_event_per_yt(events)
@@ -127,13 +125,6 @@ class XMapsDisparity:
         disp_f32, inlier_mask = compute_disparity(
             xcr_f32, ycr_f32, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
         )
-
-        # if proj_window_name is not None:
-        #     pm_display = self.proj_x_map.copy()
-        #     pm_display -= self.X_OFFSET
-        #     pm_display[self.proj_x_map == 0] = 0
-        #     cv2.imshow(proj_window_name, utils.img_to_viridis(pm_display))
-        # cv2.imshow(cam_window_name, utils.img_to_viridis(show_cam_map))
 
         point_cloud, disp_map = None, None
 
