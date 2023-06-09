@@ -19,6 +19,7 @@ class TimingWatchdog:
             self._first_event_time_us = evs["t"][0]
             # first events are arriving now, so let's start the global timers
             self.stats_printer.reset()
+            return False
 
         total_ev_time_ns = (evs["t"][0] - self._first_event_time_us) * 1000
         total_processing_t_ns = time.perf_counter_ns() - self.stats_printer.start_time_ns()
