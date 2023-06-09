@@ -123,14 +123,20 @@ class DepthReprojectionPipe:
         # generate_frame(evs, frame)
         # window.show_async(frame)
 
-        with self.stats_printer.measure_time("frame ev filter"):
-            num_events = len(evs)
-            evs = self.ev_filter_proc.filter_events(evs)
-            self.stats_printer.add_metric("frame evs filtered out [%]", 100 - len(evs) / num_events * 100)
-
         with self.stats_printer.measure_time("ev rect"):
             # get rectified event coordinates
             ev_x_rect_i16, ev_y_rect_i16 = self.calib_maps.rectify_cam_coords_i16(evs)
+
+        with self.stats_printer.measure_time("frame ev filter"):
+            filtered_evs = self.ev_filter_proc.filter_events(evs, ev_x_rect_i16)
+            self.stats_printer.add_metric("frame evs filtered out [%]", 100 - len(filtered_evs) / len(evs) * 100)
+
+            # redo the rectification, because we don't know which events were filtered out
+            # TODO perf y coords aren't used in the filtering, are computed twice
+            if len(filtered_evs) < len(evs):
+                ev_x_rect_i16, ev_y_rect_i16 = self.calib_maps.rectify_cam_coords_i16(filtered_evs)
+
+            evs = filtered_evs
 
         with self.stats_printer.measure_time("x-maps disp"):
             ev_disparity_f32, inlier_mask = self.x_maps_disp.compute_event_disparity(

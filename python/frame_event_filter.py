@@ -4,12 +4,12 @@ from collections import deque
 
 
 class FrameEventFilter:
-    def filter_events(self, events):
+    def filter_events(self, events, xp_i16):
         raise NotImplementedError()
 
 
 class NoFilter(FrameEventFilter):
-    def filter_events(self, events):
+    def filter_events(self, events, xp_i16):
         return events
 
     def __str__(self):
@@ -17,7 +17,7 @@ class NoFilter(FrameEventFilter):
 
 
 class LastEventPerXYFilter(FrameEventFilter):
-    def filter_events(self, events):
+    def filter_events(self, events, xp_i16):
         events = events[events["p"] == 1]
 
         # TODO perf not optimized
@@ -43,7 +43,7 @@ class LastEventPerXYFilter(FrameEventFilter):
 
 
 class FirstEventPerXYFilter(FrameEventFilter):
-    def filter_events(self, events):
+    def filter_events(self, events, xp_i16):
         events = events[events["p"] == 1]
 
         # TODO perf not optimized:
@@ -74,7 +74,7 @@ class FirstEventPerYTFilter(FrameEventFilter):
         # TODO perf not optimized:
         event_map_x = np.zeros((events["y"].max() + 1, xp_i16.max() + 1), dtype=np.int32)
         event_map_t = np.zeros_like(event_map_x, dtype=np.int32)
-        event_mask = np.zeros_like(event_map_x, dtype=np.bool)
+        event_mask = np.zeros_like(event_map_x, dtype=bool)
 
         event_map_x[events["y"][::-1], xp_i16[::-1]] = events["x"][::-1]
 
@@ -100,7 +100,7 @@ class FirstEventPerYTFilter(FrameEventFilter):
 
 
 class MeanFirstLastEventPerXYFilter(FrameEventFilter):
-    def filter_events(self, events):
+    def filter_events(self, events, xp_i16):
         events = events[events["p"] == 1]
 
         # TODO perf not optimized
@@ -122,15 +122,6 @@ class MeanFirstLastEventPerXYFilter(FrameEventFilter):
         filtered_events["y"] = event_coords[0][event_mask]
         filtered_events["p"] = True
 
-        # import pandas as pd
-
-        # row_100 = first_event_map[100, 265:465]
-        # r100s = pd.Series(row_100)
-
-        # row_200 = first_event_map[200, 265:465]
-        # r200s = pd.Series(row_200)
-        # r200s.plot()
-
         return filtered_events
 
     def __str__(self):
@@ -142,7 +133,7 @@ class FrameEventFilterProcessor:
     filters = deque(
         (
             NoFilter(),
-            # FirstEventPerYTFilter(),
+            FirstEventPerYTFilter(),
             FirstEventPerXYFilter(),
             LastEventPerXYFilter(),
             MeanFirstLastEventPerXYFilter(),
@@ -152,8 +143,8 @@ class FrameEventFilterProcessor:
     def selected_filter(self):
         return self.filters[0]
 
-    def filter_events(self, evs):
-        return self.selected_filter().filter_events(evs)
+    def filter_events(self, evs, xp_i16):
+        return self.selected_filter().filter_events(evs, xp_i16)
 
     def select_next_filter(self):
         self.filters.rotate(-1)
