@@ -22,8 +22,6 @@ def compute_disparity(xcr_i16, ycr_i16, t, proj_x_map, T_PX_SCALE, X_OFFSET):
     # these events will be filtered out
     y_inlier_mask = (ycr_i16 >= 0) & (ycr_i16 < proj_x_map.shape[0] - 1)
 
-    # TODO use cv2.remap to retrieve with interpolation from proj_x_map
-    # TODO subpixel + 0.5
     x_proj = proj_x_map[ycr_i16[y_inlier_mask], t_scaled[y_inlier_mask]]
 
     disp = x_proj - xcr_i16[y_inlier_mask] - X_OFFSET
