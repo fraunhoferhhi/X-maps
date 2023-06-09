@@ -1,6 +1,8 @@
 import numba
 import numpy as np
 
+from x_map import compute_x_map_from_time_map
+
 from epipolar_disparity import (
     rectify_cam_coords,
     construct_point_cloud,
@@ -60,57 +62,6 @@ def compute_disparity(xcr_f32, ycr_f32, t, proj_x_map, T_PX_SCALE, X_OFFSET):
     return disp[disp_inlier_mask], y_inlier_mask
 
 
-@numba.jit(nopython=True, parallel=True, cache=True, error_model="numpy")
-def optimize_proj_x_map(proj_time_map: np.ndarray, x_map_width: int, t_px_scale: int, X_OFFSET: int, proj_width: int):
-    """Create an X-Map for the projector to lookup the optimal x-coordinate for incoming events.
-
-    As the basis, we use the projector time map (time surface).
-
-    To create the X-Map, we perform a search for the optimal x-coordinate for each t-coordinate,
-    akin to the epipolar search in stereo vision.
-    """
-
-    proj_x_map = np.zeros((proj_time_map.shape[0], x_map_width), dtype=np.int16)
-
-    # when matching, disregard candidates with more than time of two scanlines difference:
-    # this is important at the top and bottom of the projector image, where the time map
-    # may not be defined for the full width of the projector
-    max_t_diff = 2 / proj_width
-
-    t_diffs = np.zeros((proj_time_map.shape[0], x_map_width), dtype=np.float32)
-
-    for y in numba.prange(proj_x_map.shape[0]):
-        for t_coord in range(proj_x_map.shape[1]):
-            # compute optimal x for each t
-
-            t = t_coord / t_px_scale
-
-            # TODO 0-value is not defined - but also the timestamp at the first pixel
-            # to fix, add something akin X_OFFSET to the proj time map
-            if t == 0:
-                continue
-
-            min_t_diff = np.inf
-            min_t_diff_x = -1
-
-            for x in range(proj_time_map.shape[1]):
-                t_map = proj_time_map[y, x]
-                if t_map == 0:
-                    continue
-
-                t_diff = np.abs(t - t_map)
-                if t_diff < min_t_diff:
-                    min_t_diff = t_diff
-                    min_t_diff_x = x
-
-            if min_t_diff_x != -1:
-                if min_t_diff <= max_t_diff:
-                    proj_x_map[y, t_coord] = min_t_diff_x + X_OFFSET
-                    t_diffs[y, t_coord] = min_t_diff
-
-    return proj_x_map, t_diffs
-
-
 class XMapsDisparity:
     def __init__(self, calib_params, calib_maps, proj_time_map, proj_width):
         self.calib_params = calib_params
@@ -135,8 +86,12 @@ class XMapsDisparity:
         self.X_MAP_WIDTH = proj_width
         self.T_PX_SCALE = self.X_MAP_WIDTH - 1
 
-        self.proj_x_map, t_diffs = optimize_proj_x_map(
-            proj_time_map, self.X_MAP_WIDTH, self.T_PX_SCALE, self.X_OFFSET, proj_width
+        self.proj_x_map, t_diffs = compute_x_map_from_time_map(
+            time_map=proj_time_map,
+            x_map_width=self.X_MAP_WIDTH,
+            t_px_scale=self.T_PX_SCALE,
+            X_OFFSET=self.X_OFFSET,
+            num_scanlines=proj_width,
         )
 
     def compute_event_disparity(
