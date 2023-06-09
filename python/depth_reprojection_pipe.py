@@ -11,6 +11,7 @@ from x_maps_disparity import XMapsDisparity
 from proj_time_map import ProjectorTimeMap
 from disp_to_depth import DisparityToDepth
 from timing_watchdog import TimingWatchdog
+from event_buf_pool import EventBufPool
 
 from dataclasses import dataclass, field
 
@@ -26,19 +27,6 @@ class FakeWindow:
 
     def set_keyboard_callback(self, cb):
         pass
-
-
-@dataclass
-class Pool:
-    bufs: List["EventCDBuffer"] = field(default_factory=list)
-
-    def get_buf(self):
-        if not self.bufs:
-            return PolarityFilterAlgorithm.get_empty_output_buffer()
-        return self.bufs.pop()
-
-    def return_buf(self, buf):
-        self.bufs.append(buf)
 
 
 @dataclass
@@ -71,8 +59,6 @@ class RuntimeParams:
 class DepthReprojectionPipe:
     params: RuntimeParams
 
-    _pool = Pool()
-
     pos_filter = PolarityFilterAlgorithm(1)
 
     # TODO revisit: does this have an effect on latency?
@@ -88,6 +74,8 @@ class DepthReprojectionPipe:
     stats_printer: StatsPrinter = StatsPrinter()
 
     watchdog: TimingWatchdog = None
+
+    _pool = EventBufPool()
 
     @property
     def camera_width(self):
@@ -202,11 +190,11 @@ Available keyboard shortcuts:
             self.stats_printer.toggle_silence()
 
     def process_events(self, evs):
-        if self.watchdog.is_processing_behind(evs) and self.params.should_drop_frames:
-            self.trigger_finder.drop_frame()
-
         self.stats_printer.print_stats_if_needed()
         self.stats_printer.count("processed evs", len(evs))
+
+        if self.watchdog.is_processing_behind(evs) and self.params.should_drop_frames:
+            self.trigger_finder.drop_frame()
 
         self.pos_filter.process_events(evs, self.pos_events_buf)
 
