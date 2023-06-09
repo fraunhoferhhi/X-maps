@@ -1,0 +1,19 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Download ESL (static) raw and bias files",
+            "type": "shell",
+            "command": "time /bin/bash eval/download_ESl_static_raw_bias.sh",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run X-maps evaluation script",
+            "type": "shell",
+            "command": "time /bin/bash eval/x-map-eval.sh",
+            "problemMatcher": []
+        }
+    ]
+}

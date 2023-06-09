@@ -1,0 +1,38 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.231.6/containers/ubuntu
+{
+	"name": "X-Maps Metavision Python - Ubuntu 20.04",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"args": {}
+	},
+	"containerEnv": {
+		"PYTHONPATH": "/usr/lib/python3/dist-packages/"
+	},
+	"runArgs": [
+		"--privileged",
+		"--net=host",
+		"--env=DISPLAY",
+		"-v",
+		"/tmp/.X11-unix:/tmp/.X11-unix",
+	],
+	// Set *default* container specific settings.json values on container create.
+	"settings": {},
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-python.python",
+		"ms-python.vscode-pylance",
+		"ms-python.black-formatter",
+		"matangover.mypy"
+	],
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "uname -a",
+	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"mounts": [
+		"source=/dev/bus/usb,target=/dev/bus/usb,type=bind",
+		// "source=/data/2022_ESL_Event_based_Structured_Light,target=/ESL_data,type=bind"
+	],
+	"remoteUser": "vscode"
+}
