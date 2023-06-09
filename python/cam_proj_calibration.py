@@ -165,7 +165,7 @@ class CamProjMaps:
     disp_proj_mapxy_i16: np.ndarray
 
     def __init__(
-        self, calib: CamProjCalibrationParams, cam_is_left: bool = True, zero_undistort_proj_map: bool = False
+        self, calib: CamProjCalibrationParams, cam_is_left: bool = False, zero_undistort_proj_map: bool = False
     ):
         """Provide maps to map camera and projector images to rectified images and vice versa.
 
@@ -179,8 +179,6 @@ class CamProjMaps:
             zero_undistort_proj_map: True if projector distortion should be ignored in projector rectification map
         """
 
-        # TODO make cam_is_left default for X-maps
-        # order has a very small effect on the resulting rectification
         if cam_is_left:
             rectify_params = {
                 "cameraMatrix1": calib.camera_K,
