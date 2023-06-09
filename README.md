@@ -85,10 +85,11 @@ Run the target *X-maps ESL static seq1*. A window should open that performs a li
 
 1. Ensure that the camera is working correctly by running `metavision_player` in a Terminal in VS Code.
 2. Calibrate your camera-projector setup, and write the parameters into a YAML file, storing the OpenCV matrices. Examples can be found in `data/`.
-3. Edit the command line arguments for target *X-maps live depth reprojection* in `.vscode/launch.json`.
-4. Display bright content on the projector to allow the start and end of the frame to be identified (trigger finding).
-5. Running *X-maps live depth reprojection* creates a window that shows the scene depth from the projector's view.
-6. Move the depth reprojection window to the projector to overlay the scene with the measured depth.
+3. Choose camera biases in a way to produce mostly postive events (negative are ignored in processing) and produce few events outside the projected area.
+4. Edit the command line arguments for target *X-maps live depth reprojection* in `.vscode/launch.json`.
+5. Display bright content on the projector to allow the start and end of the frame to be identified (trigger finding).
+6. Running *X-maps live depth reprojection* creates a window that shows the scene depth from the projector's view.
+7. Move the depth reprojection window to the projector to overlay the scene with the measured depth.
 
 To display the depth in full screen on the projector, use the OS window manager to maximize the window. On Ubuntu, a keyboard shortcut can be set under Settings &rarr; Keyboard &rarr; View and Customize Shortcuts &rarr; Windows &rarr; Toggle fullscreen mode.
 
@@ -124,7 +125,7 @@ As there is no dataset providing ground truth depth, we chose to check the corre
 
 ### Calibration
 
-Using OpenCV coordinate system and OpenCV camera calibration parameters read from a YAML file. Unit is cm.
+Calibration of the camera-projector system needs to be provided by the user. The software uses OpenCV coordinate system and OpenCV camera calibration parameters read from a YAML file. Unit is cm.
 
 ### Differences to ESL
 
@@ -137,35 +138,43 @@ Using OpenCV coordinate system and OpenCV camera calibration parameters read fro
 
 The X-Maps column lists the default for the depth reprojection script. The ESL column lists the default for the ESL implementation. For comparison against esl_init in the evaluation, the ESL assumptions are used when processing with X-Maps.
 
+### Depth reprojection steps
 
+Here we describe the steps that are performed by the depth reprojection script. It starts with the raw events coming from the camera. By default, the SDK is queried to get 4 packets of events per projector frame.
 
-<!-- USAGE EXAMPLES -->
-<!-- ## Usage
+#### Frame dropping
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+Unless `--no-frame-dropping` is specified, `TimingWatchdog` will measure how far behind the CPU time is behind the event time of the current events. If the CPU is more than one frame behind, it schedule that one frame worth of event packets are dropped.
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+#### Polarity filter
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
- -->
+Only positive events are kept, remaining negative events are dropped.
 
+#### Activity noise filter
 
-<!-- ROADMAP -->
-<!-- ## Roadmap
+Isolated events are removed, as they are likely to be noise outside the projected area.
 
-- [x] Add Changelog
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
+#### Trigger finder
 
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
+The trigger finder collects incoming events until it has at least one projector frame worth of events. It then searches for an uninterrupted sequence of events at least half a frame length and passes these events on.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+#### Duplicate coordinate filter
 
- -->
+The processing of the disparity is completely event-based. In time-map-based processing, events within one frame that share the same set of coordinates are implicitly removed. The `FrameEventFilter` can be used to remove duplicate events. By default it does not filter anything.
+
+#### X-Maps disparity lookup
+
+The rectified y coordinate of the event together with its scaled time are used to lookup the corresponding x value in the projector X-Map. The diffence from rectified the camera x coordinate is the disparity.
+
+#### Disparity map
+
+The disparity values are stored in a rectified map, dilated with a (7,7) filter and remapped to the projector view.
+
+When using `--camera-perspective`, the disparity values are directly stored in the camera view at the original event coordinates.
+
+#### Depth coloring
+
+The disparity map is converted to a depth map using the camera-projector calibration. The depth map is clipped to the `z_near` and `z_far` parameters and converted to a color image.
 
 ## License
 
