@@ -81,6 +81,7 @@ class DepthReprojectionProcessor:
             print(
                 """
 Available keyboard shortcuts:
+- E:     Switch between frame event filters
 - S:     Toggle printing statistics
 - Q/Esc: Quit the application"""
             )
@@ -98,6 +99,8 @@ Available keyboard shortcuts:
             return
         if key == UIKeyEvent.KEY_ESCAPE or key == UIKeyEvent.KEY_Q:
             self._window.set_close_flag()
+        if key == UIKeyEvent.KEY_E:
+            self._pipe.select_next_frame_event_filter()
         if key == UIKeyEvent.KEY_S:
             self.stats_printer.toggle_silence()
 

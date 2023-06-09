@@ -110,11 +110,6 @@ class XMapsDisparity:
         projector_view=True,
         rectified_view=True,
     ):
-        # events = mean_first_last_event_per_xy(events)
-        # events = first_event_per_yt(events)
-        # events = first_event_per_yt(events)
-        # events = events[events["p"] == 1]
-
         # for each event
         # get rectified coordinates
         xcr_f32, ycr_f32 = rectify_cam_coords(

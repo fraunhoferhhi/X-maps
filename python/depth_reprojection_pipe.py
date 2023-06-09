@@ -11,6 +11,7 @@ from proj_time_map import ProjectorTimeMap
 from disp_to_depth import DisparityToDepth
 from timing_watchdog import TimingWatchdog
 from event_buf_pool import EventBufPool
+from frame_event_filter import FrameEventFilterProcessor
 
 from dataclasses import dataclass, field
 
@@ -30,6 +31,8 @@ class DepthReprojectionPipe:
     # act_events_buf = None
 
     trigger_finder: RobustTriggerFinder = field(init=False)
+
+    ev_filter_proc = FrameEventFilterProcessor()
 
     x_maps_disp: XMapsDisparity = field(init=False)
     disp_to_depth: DisparityToDepth = field(init=False)
@@ -94,6 +97,9 @@ class DepthReprojectionPipe:
         # generate_frame(evs, frame)
         # window.show_async(frame)
 
+        with self.stats_printer.measure_time("frame ev filter"):
+            evs = self.ev_filter_proc.filter_events(evs)
+
         with self.stats_printer.measure_time("x-maps disp"):
             point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(
                 evs,
@@ -109,6 +115,10 @@ class DepthReprojectionPipe:
             depth_map = self.disp_to_depth.colorize_depth_from_disp(disp_map)
 
         self.frame_callback(depth_map)
+
+    def select_next_frame_event_filter(self):
+        new_filter = self.ev_filter_proc.select_next_filter()
+        print(f"Selected event filter: {new_filter}")
 
     def reset(self):
         self.watchdog.reset()
