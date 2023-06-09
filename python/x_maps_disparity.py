@@ -60,26 +60,33 @@ def compute_disparity(xcr_f32, ycr_f32, t, proj_x_map, T_PX_SCALE, X_OFFSET):
     return disp[disp_inlier_mask], y_inlier_mask
 
 
-@numba.njit
-def optimize_proj_x_map(proj_time_map, T_MAP_SIZE, T_PX_SCALE, X_OFFSET, proj_width):
-    # TODO perf precompute
+@numba.jit(nopython=True, parallel=True, cache=True, error_model="numpy")
+def optimize_proj_x_map(proj_time_map: np.ndarray, x_map_width: int, t_px_scale: int, X_OFFSET: int, proj_width: int):
+    """Create an X-Map for the projector to lookup the optimal x-coordinate for incoming events.
 
-    proj_x_map = np.zeros((proj_time_map.shape[0], T_MAP_SIZE), dtype=np.int16)
+    As the basis, we use the projector time map (time surface).
 
-    # don't allow more than two rows difference
+    To create the X-Map, we perform a search for the optimal x-coordinate for each t-coordinate,
+    akin to the epipolar search in stereo vision.
+    """
+
+    proj_x_map = np.zeros((proj_time_map.shape[0], x_map_width), dtype=np.int16)
+
+    # when matching, disregard candidates with more than time of two scanlines difference:
+    # this is important at the top and bottom of the projector image, where the time map
+    # may not be defined for the full width of the projector
     max_t_diff = 2 / proj_width
-    # max_t_diff = np.inf
 
-    # proj_x_map_def = np.zeros((proj_time_map.shape[0], T_MAP_SIZE), dtype=np.uint8)
-    t_diffs = np.zeros((proj_time_map.shape[0], T_MAP_SIZE), dtype=np.float32)
+    t_diffs = np.zeros((proj_time_map.shape[0], x_map_width), dtype=np.float32)
 
-    for y in range(proj_x_map.shape[0]):
+    for y in numba.prange(proj_x_map.shape[0]):
         for t_coord in range(proj_x_map.shape[1]):
             # compute optimal x for each t
 
-            t = t_coord / T_PX_SCALE
+            t = t_coord / t_px_scale
 
-            # TODO 0-value is not defined - but also is the first pixel -- proj map has no offset
+            # TODO 0-value is not defined - but also the timestamp at the first pixel
+            # to fix, add something akin X_OFFSET to the proj time map
             if t == 0:
                 continue
 
@@ -99,12 +106,9 @@ def optimize_proj_x_map(proj_time_map, T_MAP_SIZE, T_PX_SCALE, X_OFFSET, proj_wi
             if min_t_diff_x != -1:
                 if min_t_diff <= max_t_diff:
                     proj_x_map[y, t_coord] = min_t_diff_x + X_OFFSET
-                    # proj_x_map_def[y, t_coord] = True
                     t_diffs[y, t_coord] = min_t_diff
 
-    # return proj_x_map, proj_x_map_def
     return proj_x_map, t_diffs
-    # return proj_x_map
 
 
 class XMapsDisparity:
@@ -115,22 +119,24 @@ class XMapsDisparity:
         self.disp_map_shape = proj_time_map.projector_time_map_rectified.shape
 
     def init_proj_x_map(self, proj_time_map, proj_width):
+        """Setup the projector X-map for disparity lookup"""
+
         # we want to differentiate between x=0 and x undefined
         # so we add an offset to the x values -> x=0 starts at x'=X_OFFSET, x' < X_OFFSET means x is undefined
         self.X_OFFSET = 4242
 
-        # use 16 bit for indices
+        # using 16 bit for indices, make sure we don't overflow
         assert proj_time_map.shape[0] <= 2**15 - 1
         assert proj_time_map.shape[1] + self.X_OFFSET <= 2**15 - 1
 
         # the time axis can be freely discretized
         # we choose the projector width as the number of time steps
         # which should allow different scan lines to map to different time columns
-        self.T_MAP_SIZE = proj_width
-        self.T_PX_SCALE = self.T_MAP_SIZE - 1
+        self.X_MAP_WIDTH = proj_width
+        self.T_PX_SCALE = self.X_MAP_WIDTH - 1
 
         self.proj_x_map, t_diffs = optimize_proj_x_map(
-            proj_time_map, self.T_MAP_SIZE, self.T_PX_SCALE, self.X_OFFSET, proj_width
+            proj_time_map, self.X_MAP_WIDTH, self.T_PX_SCALE, self.X_OFFSET, proj_width
         )
 
     def compute_event_disparity(
