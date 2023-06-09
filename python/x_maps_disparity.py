@@ -7,24 +7,6 @@ from x_map import compute_x_map_from_time_map
 from cam_proj_calibration import CamProjCalibrationParams, CamProjMaps
 
 
-def dump_frame_data(events, inlier_mask, xcr_f32, ycr_f32, disp_f32, csv_name="/ESL_data/static/seq1/frame.csv"):
-    import pandas as pd
-
-    df = pd.DataFrame(
-        [
-            events["x"][inlier_mask].T,
-            events["y"][inlier_mask].T,
-            events["t"][inlier_mask].T,
-            xcr_f32[inlier_mask].T,
-            ycr_f32[inlier_mask].T,
-            disp_f32.T,
-        ],
-    ).T
-    df.columns = ["x", "y", "t", "x_r", "y_r", "disp"]
-
-    df.to_csv(csv_name, index=False)
-
-
 def compute_disparity(xcr_f32, ycr_f32, t, proj_x_map, T_PX_SCALE, X_OFFSET):
     # TODO perf are xcr_f32 and ycr_f32 ever used as floats?
     # otherwise directly look up the int16's
