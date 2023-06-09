@@ -130,13 +130,13 @@ class DepthReprojectionPipe:
 
         with self.stats_printer.measure_time("ev rect"):
             # get rectified event coordinates
-            ev_x_rect_f32, ev_y_rect_f32 = self.calib_maps.rectify_cam_coords(evs)
+            ev_x_rect_i16, ev_y_rect_i16 = self.calib_maps.rectify_cam_coords_i16(evs)
 
         with self.stats_printer.measure_time("x-maps disp"):
             ev_disparity_f32, inlier_mask = self.x_maps_disp.compute_event_disparity(
                 events=evs,
-                ev_x_rect_f32=ev_x_rect_f32,
-                ev_y_rect_f32=ev_y_rect_f32,
+                ev_x_rect_i16=ev_x_rect_i16,
+                ev_y_rect_i16=ev_y_rect_i16,
             )
 
         if self.params.camera_perspective:
@@ -147,8 +147,8 @@ class DepthReprojectionPipe:
         else:
             with self.stats_printer.measure_time("disp map"):
                 disp_map = self.calib_maps.compute_disp_map_projector_view(
-                    ev_x_rect_f32=ev_x_rect_f32,
-                    ev_y_rect_f32=ev_y_rect_f32,
+                    ev_x_rect_i16=ev_x_rect_i16,
+                    ev_y_rect_i16=ev_y_rect_i16,
                     inlier_mask=inlier_mask,
                     ev_disparity_f32=ev_disparity_f32,
                 )

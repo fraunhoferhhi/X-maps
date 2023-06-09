@@ -41,13 +41,15 @@ def initUndistortRectifyMapInverse(cameraMatrix, distCoeffs, R, newCameraMatrix,
     return maps[..., 0], maps[..., 1]
 
 
-def map_to_i16(mapx_f32: np.ndarray, mapy_f32: np.ndarray) -> np.ndarray:
-    assert mapx_f32.dtype == np.float32 and mapy_f32.dtype == np.float32
-    mapx_i = np.rint(mapx_f32)
-    mapy_i = np.rint(mapy_f32)
-    assert mapx_i.min() >= np.iinfo(np.int16).min and mapx_i.max() <= np.iinfo(np.int16).max
-    assert mapy_i.min() >= np.iinfo(np.int16).min and mapy_i.max() <= np.iinfo(np.int16).max
-    return np.stack((mapx_i.astype(np.int16), mapy_i.astype(np.int16)), axis=-1)
+def mapf_to_i16(map_f32: np.ndarray) -> np.ndarray:
+    assert map_f32.dtype == np.float32
+    map_i = np.rint(map_f32)
+    assert map_i.min() >= np.iinfo(np.int16).min and map_i.max() <= np.iinfo(np.int16).max
+    return map_i.astype(np.int16)
+
+
+def mapxy_to_i16s2(mapx_f32: np.ndarray, mapy_f32: np.ndarray) -> np.ndarray:
+    return np.stack((mapf_to_i16(mapx_f32), mapf_to_i16(mapy_f32)), axis=-1)
 
 
 @dataclass
@@ -241,13 +243,15 @@ class CamProjMaps:
             cv2.CV_32FC1,
         )
 
-        self.disp_cam_mapx, self.disp_cam_mapy = initUndistortRectifyMapInverse(
+        self.disp_cam_mapx_f32, self.disp_cam_mapy_f32 = initUndistortRectifyMapInverse(
             self.calib.camera_K,
             self.calib.camera_D,
             self.R1,
             self.P1,
             (self.calib.camera_width, self.calib.camera_height),
         )
+        self.disp_cam_mapx_i16 = mapf_to_i16(self.disp_cam_mapx_f32)
+        self.disp_cam_mapy_i16 = mapf_to_i16(self.disp_cam_mapy_f32)
 
         # calculate lookup table to calculate undistorted camera image
         # disp_cam_mapx_undist, disp_cam_mapy_undist = initUndistortRectifyMapInverse(
@@ -263,14 +267,18 @@ class CamProjMaps:
             (self.calib.projector_width, self.calib.projector_height),
         )
 
-        self.disp_proj_mapxy_i16 = map_to_i16(disp_proj_mapx, disp_proj_mapy)
+        self.disp_proj_mapxy_i16 = mapxy_to_i16s2(disp_proj_mapx, disp_proj_mapy)
 
-    def rectify_cam_coords(self, events):
-        # rectified camera coordinates
-        xcr_f32 = self.disp_cam_mapx[events["y"], events["x"]]
-        ycr_f32 = self.disp_cam_mapy[events["y"], events["x"]]
-
+    def rectify_cam_coords_f32(self, events):
+        xcr_f32 = self.disp_cam_mapx_f32[events["y"], events["x"]]
+        ycr_f32 = self.disp_cam_mapy_f32[events["y"], events["x"]]
         return xcr_f32, ycr_f32
+
+    def rectify_cam_coords_i16(self, events):
+        # TODO perf ys =; xs=?
+        xcr_i16 = self.disp_cam_mapx_i16[events["y"], events["x"]]
+        ycr_i16 = self.disp_cam_mapy_i16[events["y"], events["x"]]
+        return xcr_i16, ycr_i16
 
     def round_rectified_y_coords(self, ev_y_rect_f32, inlier_mask):
         # TODO + 0.5?
@@ -288,19 +296,18 @@ class CamProjMaps:
         # TODO instead of using the rounded rectified coordinates, be could also use the input event coordinates
         pass
 
-    def compute_disp_map_projector_view(self, ev_x_rect_f32, ev_y_rect_f32, inlier_mask, ev_disparity_f32):
-        ycr_i16 = self.round_rectified_y_coords(ev_y_rect_f32, inlier_mask)
-        xpr_i16 = np.rint(ev_x_rect_f32[inlier_mask] + ev_disparity_f32).astype(np.int16)
+    def compute_disp_map_projector_view(self, ev_x_rect_i16, ev_y_rect_i16, inlier_mask, ev_disparity_f32):
+        xpr_i16 = np.rint(ev_x_rect_i16[inlier_mask] + ev_disparity_f32).astype(np.int16)
         disp_map = np.zeros((self.calib.rect_image_height, self.calib.rect_image_width), dtype=np.float32)
-        disp_map[ycr_i16, xpr_i16] = ev_disparity_f32
+        disp_map[ev_y_rect_i16[inlier_mask], xpr_i16] = ev_disparity_f32
         return disp_map
 
-    def compute_disp_map_rect_camera_view(self, ev_x_rect_f32, ev_y_rect_f32, inlier_mask, ev_disparity_f32):
-        ycr_i16 = self.round_rectified_y_coords(ev_y_rect_f32, inlier_mask)
-        xcr_i16 = np.rint(ev_x_rect_f32[inlier_mask]).astype(np.int16)
-        disp_map = np.zeros((self.calib.rect_image_height, self.calib.rect_image_width), dtype=np.float32)
-        disp_map[ycr_i16, xcr_i16] = ev_disparity_f32
-        return disp_map
+    # def compute_disp_map_rect_camera_view(self, ev_x_rect_f32, ev_y_rect_f32, inlier_mask, ev_disparity_f32):
+    #     ycr_i16 = self.round_rectified_y_coords(ev_y_rect_f32, inlier_mask)
+    #     xcr_i16 = np.rint(ev_x_rect_f32[inlier_mask]).astype(np.int16)
+    #     disp_map = np.zeros((self.calib.rect_image_height, self.calib.rect_image_width), dtype=np.float32)
+    #     disp_map[ycr_i16, xcr_i16] = ev_disparity_f32
+    #     return disp_map
 
     def compute_disp_map_camera_view(self, events, inlier_mask, ev_disparity_f32):
         x_cam = events["x"][inlier_mask]

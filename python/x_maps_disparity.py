@@ -7,9 +7,6 @@ from cam_proj_calibration import CamProjCalibrationParams, CamProjMaps
 
 
 def compute_disparity(xcr_i16, ycr_i16, t, proj_x_map, T_PX_SCALE, X_OFFSET):
-    # TODO perf are xcr_f32 and ycr_f32 ever used as floats?
-    # otherwise directly look up the int16's
-
     # events may not be completely sorted by time if
     # they were processed in a filter that averages over coordinates
     min_t = t.min()
@@ -74,18 +71,14 @@ class XMapsDisparity:
     def compute_event_disparity(
         self,
         events,
-        ev_x_rect_f32,
-        ev_y_rect_f32,
+        ev_x_rect_i16,
+        ev_y_rect_i16,
     ):
-        # rectified rounded event coordinates
-        xcr_i16 = np.rint(ev_x_rect_f32).astype(np.int16)
-        ycr_i16 = np.rint(ev_y_rect_f32).astype(np.int16)
-
         # at time t and rectified y, access X-map
         # note: ev_disparity_f32 may be shorter original events list
         # because some events may lie outside the projector X-map.
         # events[inlier_mask] can be used to trim the original events list
         ev_disparity_f32, inlier_mask = compute_disparity(
-            xcr_i16, ycr_i16, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
+            ev_x_rect_i16, ev_y_rect_i16, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
         )
         return ev_disparity_f32, inlier_mask

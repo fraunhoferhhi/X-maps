@@ -96,12 +96,13 @@ def main():
             }
             start = time.time()
 
-            ev_x_rect_f32, ev_y_rect_f32 = cam_proj_maps.rectify_cam_coords(events)
+            ev_x_rect_f32, ev_y_rect_f32 = cam_proj_maps.rectify_cam_coords_f32(events)
+            ev_x_rect_i16, ev_y_rect_i16 = cam_proj_maps.rectify_cam_coords_i16(events)
 
             ev_disparity_f32, inlier_mask = x_maps_disp.compute_event_disparity(
                 events=events,
-                ev_x_rect_f32=ev_x_rect_f32,
-                ev_y_rect_f32=ev_y_rect_f32,
+                ev_x_rect_i16=ev_x_rect_i16,
+                ev_y_rect_i16=ev_y_rect_i16,
             )
 
             disparity = cam_proj_maps.compute_disp_map_camera_view(
