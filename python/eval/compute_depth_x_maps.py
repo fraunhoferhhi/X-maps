@@ -60,7 +60,7 @@ def main():
     )
 
     # special modes to mirror the ESL implementation for undistort map creation
-    cam_proj_maps = CamProjMaps(calib_params, cam_is_left=False, zero_undistort_proj_map=True)
+    cam_proj_maps = CamProjMaps(calib=calib_params, zero_undistort_proj_map=True)
 
     # special modes to mirror the ESL implementation for the projector time map
     proj_time_map = ProjectorTimeMap.from_calib(
@@ -70,7 +70,7 @@ def main():
         remap_border_mode=cv2.BORDER_CONSTANT,
     )
 
-    x_maps_comp = XMapsDisparity(
+    x_maps_disp = XMapsDisparity(
         calib_params=calib_params,
         cam_proj_maps=cam_proj_maps,
         proj_time_map_rect=proj_time_map.projector_time_map_rectified,
@@ -95,12 +95,17 @@ def main():
                 "t": event_t,
             }
             start = time.time()
-            point_cloud, disparity = x_maps_comp.compute_event_disparity(
-                events,
-                compute_point_cloud=True,
-                compute_disp_map=True,
-                projector_view=False,
-                rectified_view=False,
+
+            ev_x_rect_f32, ev_y_rect_f32 = cam_proj_maps.rectify_cam_coords(events)
+
+            ev_disparity_f32, inlier_mask = x_maps_disp.compute_event_disparity(
+                events=events,
+                ev_x_rect_f32=ev_x_rect_f32,
+                ev_y_rect_f32=ev_y_rect_f32,
+            )
+
+            disparity = cam_proj_maps.compute_disp_map_camera_view(
+                events=events, inlier_mask=inlier_mask, ev_disparity_f32=ev_disparity_f32
             )
 
             print("Completed disparity estimation: " + str(i) + " in time " + str(time.time() - start))
@@ -108,6 +113,12 @@ def main():
             depth_init = disparity_to_depth_rectified(disparity, cam_proj_maps.P2)
 
             np.save(os.path.join(depth_dir, "scans" + str(i).zfill(3) + ".npy"), depth_init)
+
+            point_cloud = cam_proj_maps.construct_point_cloud(
+                ev_x_rect_f32[inlier_mask],
+                ev_y_rect_f32[inlier_mask],
+                ev_disparity_f32,
+            )
 
             cloud = PyntCloud(
                 pd.DataFrame(

@@ -73,7 +73,11 @@ class DepthReprojectionPipe:
 
         with SingleTimer("Setting up disparity to depth"):
             self.disp_to_depth = DisparityToDepth(
-                self.stats_printer, self.calib_maps, self.params.z_near, self.params.z_far
+                stats=self.stats_printer,
+                calib_params=calib_params,
+                calib_maps=self.calib_maps,
+                z_near=self.params.z_near,
+                z_far=self.params.z_far,
             )
 
         self.trigger_finder = RobustTriggerFinder(
@@ -106,20 +110,30 @@ class DepthReprojectionPipe:
             evs = self.ev_filter_proc.filter_events(evs)
             self.stats_printer.add_metric("frame evs filtered out [%]", 100 - len(evs) / num_events * 100)
 
-        with self.stats_printer.measure_time("ev rectification"):
+        with self.stats_printer.measure_time("ev rect"):
             # get rectified event coordinates
             ev_x_rect_f32, ev_y_rect_f32 = self.calib_maps.rectify_cam_coords(evs)
 
         with self.stats_printer.measure_time("x-maps disp"):
-            point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(
+            ev_disparity_f32, inlier_mask = self.x_maps_disp.compute_event_disparity(
                 events=evs,
                 ev_x_rect_f32=ev_x_rect_f32,
                 ev_y_rect_f32=ev_y_rect_f32,
-                projector_view=not self.params.camera_perspective,
-                rectified_view=not self.params.camera_perspective,
             )
 
-        if not self.params.camera_perspective:
+        if self.params.camera_perspective:
+            with self.stats_printer.measure_time("disp map"):
+                disp_map = self.calib_maps.compute_disp_map_camera_view(
+                    events=evs, inlier_mask=inlier_mask, ev_disparity_f32=ev_disparity_f32
+                )
+        else:
+            with self.stats_printer.measure_time("disp map"):
+                disp_map = self.calib_maps.compute_disp_map_projector_view(
+                    ev_x_rect_f32=ev_x_rect_f32,
+                    ev_y_rect_f32=ev_y_rect_f32,
+                    inlier_mask=inlier_mask,
+                    ev_disparity_f32=ev_disparity_f32,
+                )
             with self.stats_printer.measure_time("remap disp"):
                 disp_map = self.disp_to_depth.remap_rectified_disp_map_to_proj(disp_map)
 

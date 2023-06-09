@@ -130,24 +130,6 @@ def compute_disparity(
 
 
 @benchmark
-# @njit # performs worse
-def construct_point_cloud(xpr_f32, ypr_f32, disp_f32, Q):
-    points = np.ones((len(xpr_f32), 4), dtype=np.float32)
-    # points = np.stack((xpr_dispf, ypr_dispf, 1)).T
-    points[:, 0] = xpr_f32
-    points[:, 1] = ypr_f32
-    points[:, 2] = -disp_f32
-    point_cloud = (Q.astype(np.float32) @ points.T).T
-    point_cloud = (point_cloud / point_cloud[:, 3:])[:, :3]
-
-    # invert y and z axis
-    point_cloud[:, 1] = -point_cloud[:, 1]
-    point_cloud[:, 2] = -point_cloud[:, 2]
-
-    return point_cloud
-
-
-@benchmark
 def compute_epipolar_disparity(
     events,
     proj_width,

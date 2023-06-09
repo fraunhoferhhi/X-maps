@@ -1,6 +1,6 @@
 from typing import Optional
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, InitVar
 
 import numpy as np
 import cv2
@@ -140,33 +140,36 @@ class CamProjCalibrationParams:
 
 @dataclass
 class CamProjMaps:
+    calib: CamProjCalibrationParams
+
+    cam_is_left: InitVar[bool] = False
+    zero_undistort_proj_map: InitVar[bool] = False
+
     # TODO move to params
-    R1: np.ndarray
-    R2: np.ndarray
+    R1: np.ndarray = field(init=False)
+    R2: np.ndarray = field(init=False)
 
-    P1: np.ndarray
-    P2: np.ndarray
+    P1: np.ndarray = field(init=False)
+    P2: np.ndarray = field(init=False)
 
-    Q: np.ndarray
+    Q: np.ndarray = field(init=False)
 
     # lookup table to rectify camera image/time map with cv2.remap
-    camera_mapx: np.ndarray
-    camera_mapy: np.ndarray
+    camera_mapx: np.ndarray = field(init=False)
+    camera_mapy: np.ndarray = field(init=False)
 
     # lookup tables to rectify projector image/time map with cv2.remap
-    projector_mapx: np.ndarray
-    projector_mapy: np.ndarray
+    projector_mapx: np.ndarray = field(init=False)
+    projector_mapy: np.ndarray = field(init=False)
 
     # lookup table to unrectify camera image/time map with cv2.remap
-    disp_cam_mapx: np.ndarray
-    disp_cam_mapy: np.ndarray
+    disp_cam_mapx: np.ndarray = field(init=False)
+    disp_cam_mapy: np.ndarray = field(init=False)
 
     # lookup table to unrectify projector image/time map with cv2.remap
-    disp_proj_mapxy_i16: np.ndarray
+    disp_proj_mapxy_i16: np.ndarray = field(init=False)
 
-    def __init__(
-        self, calib: CamProjCalibrationParams, cam_is_left: bool = False, zero_undistort_proj_map: bool = False
-    ):
+    def __post_init__(self, cam_is_left, zero_undistort_proj_map):
         """Provide maps to map camera and projector images to rectified images and vice versa.
 
         Default params are used in X-maps.
@@ -181,17 +184,17 @@ class CamProjMaps:
 
         if cam_is_left:
             rectify_params = {
-                "cameraMatrix1": calib.camera_K,
-                "distCoeffs1": calib.camera_D,
-                "cameraMatrix2": calib.projector_K,
-                "distCoeffs2": calib.projector_D,
+                "cameraMatrix1": self.calib.camera_K,
+                "distCoeffs1": self.calib.camera_D,
+                "cameraMatrix2": self.calib.projector_K,
+                "distCoeffs2": self.calib.projector_D,
             }
         else:
             rectify_params = {
-                "cameraMatrix1": calib.projector_K,
-                "distCoeffs1": calib.projector_D,
-                "cameraMatrix2": calib.camera_K,
-                "distCoeffs2": calib.camera_D,
+                "cameraMatrix1": self.calib.projector_K,
+                "distCoeffs1": self.calib.projector_D,
+                "cameraMatrix2": self.calib.camera_K,
+                "distCoeffs2": self.calib.camera_D,
             }
 
         # calculate stereo rectification from camera and projector instrinsics and extrinsics
@@ -204,9 +207,9 @@ class CamProjMaps:
             validPixROI1,
             validPixROI2,
         ) = cv2.stereoRectify(
-            imageSize=(calib.rect_image_width, calib.rect_image_height),
-            R=calib.cam2proj_R,
-            T=calib.cam2proj_T,
+            imageSize=(self.calib.rect_image_width, self.calib.rect_image_height),
+            R=self.calib.cam2proj_R,
+            T=self.calib.cam2proj_T,
             alpha=-1,
             **rectify_params,
         )
@@ -217,43 +220,47 @@ class CamProjMaps:
 
         # TODO perf: why isn't this signed i16?
         self.camera_mapx, self.camera_mapy = cv2.initUndistortRectifyMap(
-            calib.camera_K,
-            calib.camera_D,
+            self.calib.camera_K,
+            self.calib.camera_D,
             self.R1,
             self.P1,
-            (calib.rect_image_width, calib.rect_image_height),
+            (self.calib.rect_image_width, self.calib.rect_image_height),
             cv2.CV_32FC1,
         )
 
         # ESL compatibility: projector distortion is ignored here, but still used in cv2.stereoRectify
-        proj_dist = np.zeros(5) if zero_undistort_proj_map else calib.projector_D
+        proj_dist = np.zeros(5) if zero_undistort_proj_map else self.calib.projector_D
 
         # TODO perf: why isn't this signed i16?
         self.projector_mapx, self.projector_mapy = cv2.initUndistortRectifyMap(
-            calib.projector_K,
+            self.calib.projector_K,
             proj_dist,
             self.R2,
             self.P2,
-            (calib.rect_image_width, calib.rect_image_height),
+            (self.calib.rect_image_width, self.calib.rect_image_height),
             cv2.CV_32FC1,
         )
 
         self.disp_cam_mapx, self.disp_cam_mapy = initUndistortRectifyMapInverse(
-            calib.camera_K, calib.camera_D, self.R1, self.P1, (calib.camera_width, calib.camera_height)
+            self.calib.camera_K,
+            self.calib.camera_D,
+            self.R1,
+            self.P1,
+            (self.calib.camera_width, self.calib.camera_height),
         )
 
         # calculate lookup table to calculate undistorted camera image
         # disp_cam_mapx_undist, disp_cam_mapy_undist = initUndistortRectifyMapInverse(
-        #     calib.camera_K, calib.camera_D, np.eye(3), calib.camera_K, (calib.camera_width, calib.camera_height)
+        #     self.calib.camera_K, self.calib.camera_D, np.eye(3), self.calib.camera_K, (self.calib.camera_width, self.calib.camera_height)
         # )
 
         # calculate lookup table to unrectify projector image/time map with cv2.remap
         disp_proj_mapx, disp_proj_mapy = initUndistortRectifyMapInverse(
-            calib.projector_K,
-            calib.projector_D,
+            self.calib.projector_K,
+            self.calib.projector_D,
             self.R2,
             self.P2,
-            (calib.projector_width, calib.projector_height),
+            (self.calib.projector_width, self.calib.projector_height),
         )
 
         self.disp_proj_mapxy_i16 = map_to_i16(disp_proj_mapx, disp_proj_mapy)
@@ -264,3 +271,54 @@ class CamProjMaps:
         ycr_f32 = self.disp_cam_mapy[events["y"], events["x"]]
 
         return xcr_f32, ycr_f32
+
+    def round_rectified_y_coords(self, ev_y_rect_f32, inlier_mask):
+        # TODO + 0.5?
+        yr_i16 = np.rint(ev_y_rect_f32[inlier_mask]).astype(np.int16)
+        return yr_i16
+
+    def compute_disp_map(self):
+        # ypr_dispf = np.rint(ypr_f32[inlier_mask]).astype(np.int16)
+        # xpr_dispf = np.rint(xpr_f32[inlier_mask]).astype(np.int16)
+
+        # TODO: choice between ypr and ycr
+        # disp_map[ypr_dispf, xpr_dispf] = disp[inlier_mask]
+
+        # TODO should one of the disparities actually be negative, assuption: no, since then the baseline also must be negative and it would cancel out ? (N.G.)
+        # TODO instead of using the rounded rectified coordinates, be could also use the input event coordinates
+        pass
+
+    def compute_disp_map_projector_view(self, ev_x_rect_f32, ev_y_rect_f32, inlier_mask, ev_disparity_f32):
+        ycr_i16 = self.round_rectified_y_coords(ev_y_rect_f32, inlier_mask)
+        xpr_i16 = np.rint(ev_x_rect_f32[inlier_mask] + ev_disparity_f32).astype(np.int16)
+        disp_map = np.zeros((self.calib.rect_image_height, self.calib.rect_image_width), dtype=np.float32)
+        disp_map[ycr_i16, xpr_i16] = ev_disparity_f32
+        return disp_map
+
+    def compute_disp_map_rect_camera_view(self, ev_x_rect_f32, ev_y_rect_f32, inlier_mask, ev_disparity_f32):
+        ycr_i16 = self.round_rectified_y_coords(ev_y_rect_f32, inlier_mask)
+        xcr_i16 = np.rint(ev_x_rect_f32[inlier_mask]).astype(np.int16)
+        disp_map = np.zeros((self.calib.rect_image_height, self.calib.rect_image_width), dtype=np.float32)
+        disp_map[ycr_i16, xcr_i16] = ev_disparity_f32
+        return disp_map
+
+    def compute_disp_map_camera_view(self, events, inlier_mask, ev_disparity_f32):
+        x_cam = events["x"][inlier_mask]
+        y_cam = events["y"][inlier_mask]
+        disp_map = np.zeros((self.calib.camera_height, self.calib.camera_width), dtype=np.float32)
+        disp_map[y_cam, x_cam] = ev_disparity_f32
+        return disp_map
+
+    def construct_point_cloud(self, xpr_f32, ypr_f32, disp_f32):
+        points = np.ones((len(xpr_f32), 4), dtype=np.float32)
+        points[:, 0] = xpr_f32 + disp_f32
+        points[:, 1] = ypr_f32
+        points[:, 2] = -disp_f32
+        point_cloud = (self.Q.astype(np.float32) @ points.T).T
+        point_cloud = (point_cloud / point_cloud[:, 3:])[:, :3]
+
+        # invert y and z axis
+        point_cloud[:, 1] = -point_cloud[:, 1]
+        point_cloud[:, 2] = -point_cloud[:, 2]
+
+        return point_cloud

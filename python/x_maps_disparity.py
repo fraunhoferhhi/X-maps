@@ -6,10 +6,6 @@ from dataclasses import dataclass, field, InitVar
 from x_map import compute_x_map_from_time_map
 from cam_proj_calibration import CamProjCalibrationParams, CamProjMaps
 
-from epipolar_disparity import (
-    construct_point_cloud,
-)
-
 
 def dump_frame_data(events, inlier_mask, xcr_f32, ycr_f32, disp_f32, csv_name="/ESL_data/static/seq1/frame.csv"):
     import pandas as pd
@@ -72,7 +68,6 @@ class XMapsDisparity:
     proj_time_map_rect: InitVar[np.ndarray]
 
     proj_x_map: np.ndarray = field(init=False)
-    disp_map_shape: tuple = field(init=False)
 
     def __post_init__(self, proj_time_map_rect):
         """Setup the projector X-map for disparity lookup"""
@@ -99,17 +94,11 @@ class XMapsDisparity:
             num_scanlines=self.calib_params.projector_width,
         )
 
-        self.disp_map_shape = proj_time_map_rect.shape
-
     def compute_event_disparity(
         self,
         events,
         ev_x_rect_f32,
         ev_y_rect_f32,
-        compute_point_cloud=False,
-        compute_disp_map=True,
-        projector_view=True,
-        rectified_view=True,
     ):
         # at time t and rectified y, access X-map
         # note: ev_disparity_f32 may be shorter original events list
@@ -118,57 +107,4 @@ class XMapsDisparity:
         ev_disparity_f32, inlier_mask = compute_disparity(
             ev_x_rect_f32, ev_y_rect_f32, events["t"], self.proj_x_map, self.T_PX_SCALE, self.X_OFFSET
         )
-
-        point_cloud, disp_map = None, None
-
-        if compute_point_cloud:
-            point_cloud = construct_point_cloud(
-                ev_x_rect_f32[inlier_mask] + ev_disparity_f32,
-                ev_y_rect_f32[inlier_mask],
-                ev_disparity_f32,
-                self.cam_proj_maps.Q,
-            )
-
-        if compute_disp_map:
-            # ypr_dispf = np.rint(ypr_f32[inlier_mask]).astype(np.int16)
-            # xpr_dispf = np.rint(xpr_f32[inlier_mask]).astype(np.int16)
-
-            # TODO: choice between ypr and ycr
-            # disp_map[ypr_dispf, xpr_dispf] = disp[inlier_mask]
-
-            # TODO + 0.5?
-            if rectified_view:
-                ycr_i16 = np.rint(ev_y_rect_f32[inlier_mask]).astype(np.int16)
-
-            # TODO should one of the disparities actually be negative, assuption: no, since then the baseline also must be negative and it would cancel out ? (N.G.)
-            # TODO instead of using the rounded rectified coordinates, be could also use the input event coordinates
-            if projector_view:
-                if not rectified_view:
-                    print("Projector view not implemented. Return rectified view")
-                    return point_cloud, None
-
-                xpr_i16 = np.rint(ev_x_rect_f32[inlier_mask] + ev_disparity_f32).astype(np.int16)
-                disp_map = np.zeros(self.disp_map_shape, dtype=np.float32)
-                disp_map[ycr_i16, xpr_i16] = ev_disparity_f32
-            else:
-                if rectified_view:
-                    xcr_i16 = np.rint(ev_x_rect_f32[inlier_mask]).astype(np.int16)
-                    disp_map = np.zeros(self.disp_map_shape, dtype=np.float32)
-                    disp_map[ycr_i16, xcr_i16] = ev_disparity_f32
-                else:
-                    x_cam = events["x"][inlier_mask]
-                    y_cam = events["y"][inlier_mask]
-                    disp_map = np.zeros(
-                        (self.calib_params.camera_height, self.calib_params.camera_width), dtype=np.float32
-                    )
-                    disp_map[y_cam, x_cam] = ev_disparity_f32
-
-        # dump_frame_data(
-        #     events,
-        #     inlier_mask,
-        #     xcr_f32,
-        #     ycr_f32,
-        #     disp_f32,
-        # )
-
-        return point_cloud, disp_map
+        return ev_disparity_f32, inlier_mask

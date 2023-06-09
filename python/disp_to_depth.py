@@ -66,6 +66,7 @@ def disparity_to_depth_rectified(disparity, P1):
 @dataclass
 class DisparityToDepth:
     stats: "StatsPrinter"
+    calib_params: "CalibParams"
     calib_maps: "CamProjMaps"
     z_near: float
     z_far: float
