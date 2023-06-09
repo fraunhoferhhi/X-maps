@@ -278,6 +278,8 @@ class StatsPrinter:
         print(f"{global_avg_color}", end="")
         self.printed_lines += self.global_stats.print_avg_time_measures()
 
+        print(reset_color, end="")
+
         self.local_stats.reset()
 
         self.last_print_time = time.perf_counter_ns()
