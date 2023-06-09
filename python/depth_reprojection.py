@@ -1,13 +1,13 @@
 from metavision_sdk_ui import EventLoop
 
-from bias_events_iterator import BiasEventsIterator, NonBufferedBiasEventsIterator
-from depth_reprojection_pipe import DepthReprojectionPipe, RuntimeParams
+from bias_events_iterator import NonBufferedBiasEventsIterator
+from depth_reprojection_processor import DepthReprojectionProcessor, RuntimeParams
 
 import click
 import sys
 
 
-def project_events(bias, input, params, delta_t, pipe):
+def project_events(bias, input, params, delta_t, ev_processor):
     mv_iterator = NonBufferedBiasEventsIterator(input_filename=input, delta_t=delta_t, bias_file=bias)
     # mv_iterator = BiasEventsIterator(input_filename=cli_params["input"], delta_t=8000, bias_file=cli_params["bias"])
     cam_height_reader, cam_width_reader = mv_iterator.get_size()  # Camera Geometry
@@ -16,16 +16,16 @@ def project_events(bias, input, params, delta_t, pipe):
     assert cam_width_reader == params.camera_width
 
     for evs in mv_iterator:
-        with pipe.stats_printer.measure_time("main loop"):
+        with ev_processor.stats_printer.measure_time("main loop"):
             # Dispatch system events to the window
             EventLoop.poll_and_dispatch()
 
             if not len(evs):
                 continue
 
-            pipe.process_events(evs)
+            ev_processor.process_events(evs)
 
-            if pipe.should_close():
+            if ev_processor.should_close():
                 sys.exit(0)
 
 
@@ -69,11 +69,11 @@ def main(bias, input, loop_input, **cli_params):
     print(f"Using delta_t={delta_t:.2f} us to process {EV_PACKETS_PER_FRAME} ev packets per projector frame.")
     print(f"If you see frame drops, try reducing EV_PACKETS_PER_FRAME to 1. This may increase latency.")
 
-    with DepthReprojectionPipe(params) as pipe:
+    with DepthReprojectionProcessor(params) as ev_processor:
         while True:
-            project_events(bias, input, params, delta_t, pipe)
+            project_events(bias, input, params, delta_t, ev_processor)
             if loop_input:
-                pipe.reset()
+                ev_processor.reset()
             else:
                 break
 

@@ -1,8 +1,7 @@
-from typing import List
+from typing import Any, Callable
 
 from metavision_sdk_core import PolarityFilterAlgorithm
 from metavision_sdk_cv import ActivityNoiseFilterAlgorithm
-from metavision_sdk_ui import BaseWindow, MTWindow, UIAction, UIKeyEvent
 
 from trigger_finder import RobustTriggerFinder
 from stats_printer import StatsPrinter, SingleTimer
@@ -13,104 +12,95 @@ from disp_to_depth import DisparityToDepth
 from timing_watchdog import TimingWatchdog
 from event_buf_pool import EventBufPool
 
-from dataclasses import dataclass, field
-
-USE_FAKE_WINDOW = False
-
-
-class FakeWindow:
-    def should_close(self):
-        return False
-
-    def show_async(self, img):
-        pass
-
-    def set_keyboard_callback(self, cb):
-        pass
-
-
-@dataclass
-class RuntimeParams:
-    camera_width: int
-    camera_height: int
-
-    projector_width: int
-    projector_height: int
-
-    projector_fps: int
-
-    z_near: float
-    z_far: float
-
-    calib: str
-
-    projector_time_map: str
-
-    no_frame_dropping: bool
-
-    camera_perspective: bool
-
-    @property
-    def should_drop_frames(self):
-        return not self.no_frame_dropping
+from dataclasses import dataclass
 
 
 @dataclass
 class DepthReprojectionPipe:
-    params: RuntimeParams
+    params: "RuntimeParams"
 
-    pos_filter = PolarityFilterAlgorithm(1)
+    stats_printer: StatsPrinter
+
+    frame_callback: Callable
+
+    _pos_filter = PolarityFilterAlgorithm(1)
 
     # TODO revisit: does this have an effect on latency?
-    act_filter = None
+    _act_filter: ActivityNoiseFilterAlgorithm
 
-    pos_events_buf = None
+    _pos_events_buf: Any
     # act_events_buf = None
 
-    trigger_finder = None
+    _trigger_finder: RobustTriggerFinder
 
-    x_maps_disp: XMapsDisparity = None
-    disp_to_depth: DisparityToDepth = None
-    stats_printer: StatsPrinter = StatsPrinter()
+    _x_maps_disp: XMapsDisparity
+    _disp_to_depth: DisparityToDepth
 
-    watchdog: TimingWatchdog = None
+    _watchdog: TimingWatchdog
 
-    _pool = EventBufPool()
+    _pool: EventBufPool
 
-    @property
-    def camera_width(self):
-        return self.params.camera_width
+    @staticmethod
+    def create(params: "RuntimeParams", stats_printer: StatsPrinter, frame_callback: Callable):
+        pool = EventBufPool()
 
-    @property
-    def camera_height(self):
-        return self.params.camera_height
+        with SingleTimer("Setting up calibration"):
+            calib_params = CamProjCalibrationParams.from_yaml(
+                params.calib, params.camera_width, params.camera_height, params.projector_width, params.projector_height
+            )
+            calib_maps = CamProjMaps(calib_params)
 
-    @property
-    def projector_width(self):
-        return self.params.projector_width
+        with SingleTimer("Setting up projector time map"):
+            if params.projector_time_map is not None:
+                proj_time_map = ProjectorTimeMap.from_file(params.projector_time_map)
+            else:
+                proj_time_map = ProjectorTimeMap.from_calib(calib_params, calib_maps)
 
-    @property
-    def projector_height(self):
-        return self.params.projector_height
+        with SingleTimer("Setting up projector X-map"):
+            x_maps_disp = XMapsDisparity(calib_params, calib_maps, proj_time_map, params.projector_width)
 
-    @property
-    def projector_fps(self):
-        return self.params.projector_fps
+        with SingleTimer("Setting up disparity to depth"):
+            disp_to_depth = DisparityToDepth(stats_printer, calib_maps, params.z_near, params.z_far)
 
-    @property
-    def activity_time_ths(self):
-        return int(1e6 / self.projector_fps)
+        trigger_finder = RobustTriggerFinder(projector_fps=params.projector_fps, stats=stats_printer, pool=pool)
 
-    def should_close(self):
-        return self.window.should_close()
+        pipe = DepthReprojectionPipe(
+            params=params,
+            stats_printer=stats_printer,
+            frame_callback=frame_callback,
+            _act_filter=ActivityNoiseFilterAlgorithm(
+                params.camera_width, params.camera_height, int(1e6 / params.projector_fps)
+            ),
+            _pos_events_buf=PolarityFilterAlgorithm.get_empty_output_buffer(),
+            _trigger_finder=trigger_finder,
+            _x_maps_disp=x_maps_disp,
+            _disp_to_depth=disp_to_depth,
+            _watchdog=TimingWatchdog(stats_printer=stats_printer, projector_fps=params.projector_fps),
+            _pool=pool,
+        )
 
-    def on_frame_evs(self, evs):
+        trigger_finder.register_callback(pipe.process_ev_frame)
+
+        return pipe
+
+    def process_events(self, evs):
+        if self._watchdog.is_processing_behind(evs) and self.params.should_drop_frames:
+            self._trigger_finder.drop_frame()
+
+        self._pos_filter.process_events(evs, self._pos_events_buf)
+
+        act_out_buf = self._pool.get_buf()
+        self._act_filter.process_events(self._pos_events_buf, act_out_buf)
+
+        self._trigger_finder.process_events(act_out_buf)
+
+    def process_ev_frame(self, evs):
         """Callback from the trigger finder, evs contain the events of the current frame"""
         # generate_frame(evs, frame)
         # window.show_async(frame)
 
         with self.stats_printer.measure_time("x-maps disp"):
-            point_cloud, disp_map = self.x_maps_disp.compute_event_disparity(
+            point_cloud, disp_map = self._x_maps_disp.compute_event_disparity(
                 evs,
                 projector_view=not self.params.camera_perspective,
                 rectified_view=not self.params.camera_perspective,
@@ -118,93 +108,13 @@ class DepthReprojectionPipe:
 
         if not self.params.camera_perspective:
             with self.stats_printer.measure_time("remap disp"):
-                disp_map = self.disp_to_depth.remap_rectified_disp_map_to_proj(disp_map)
+                disp_map = self._disp_to_depth.remap_rectified_disp_map_to_proj(disp_map)
 
         with self.stats_printer.measure_time("disp2rgb"):
-            depth_map = self.disp_to_depth.colorize_depth_from_disp(disp_map)
+            depth_map = self._disp_to_depth.colorize_depth_from_disp(disp_map)
 
-        self.window.show_async(depth_map)
-        self.stats_printer.count("frames shown")
-
-    def __enter__(self):
-        self.act_filter = ActivityNoiseFilterAlgorithm(self.camera_width, self.camera_height, self.activity_time_ths)
-
-        self.pos_events_buf = PolarityFilterAlgorithm.get_empty_output_buffer()
-        # self.act_events_buf = ActivityNoiseFilterAlgorithm.get_empty_output_buffer()
-
-        self.watchdog = TimingWatchdog(stats_printer=self.stats_printer, projector_fps=self.projector_fps)
-
-        self.trigger_finder = RobustTriggerFinder(
-            projector_fps=self.projector_fps, stats=self.stats_printer, callback=self.on_frame_evs, pool=self._pool
-        )
-
-        with SingleTimer("Setting up calibration"):
-            calib_params = CamProjCalibrationParams.from_yaml(
-                self.params.calib, self.camera_width, self.camera_height, self.projector_width, self.projector_height
-            )
-            calib_maps = CamProjMaps(calib_params)
-
-        with SingleTimer("Setting up projector time map"):
-            if self.params.projector_time_map is not None:
-                proj_time_map = ProjectorTimeMap.from_file(self.params.projector_time_map)
-            else:
-                proj_time_map = ProjectorTimeMap.from_calib(calib_params, calib_maps)
-
-        with SingleTimer("Setting up projector X-map"):
-            self.x_maps_disp = XMapsDisparity(calib_params, calib_maps, proj_time_map, self.projector_width)
-
-        with SingleTimer("Setting up disparity to depth"):
-            self.disp_to_depth = DisparityToDepth(self.stats_printer, calib_maps, self.params.z_near, self.params.z_far)
-
-        if USE_FAKE_WINDOW:
-            self.window = FakeWindow()
-        else:
-            self.window = MTWindow(
-                title="X Maps Depth",
-                width=self.camera_width if self.params.camera_perspective else self.projector_width,
-                height=self.camera_height if self.params.camera_perspective else self.projector_height,
-                mode=BaseWindow.RenderMode.BGR,
-                open_directly=True,
-            )
-            print(
-                """
-Available keyboard shortcuts:
-- S:     Toggle printing statistics
-- Q/Esc: Quit the application"""
-            )
-
-        self.window.set_keyboard_callback(self.keyboard_cb)
-
-        return self
-
-    def __exit__(self, *exc_info):
-        self.stats_printer.print_stats()
-        return False
-
-    def keyboard_cb(self, key, scancode, action, mods):
-        if action != UIAction.RELEASE:
-            return
-        if key == UIKeyEvent.KEY_ESCAPE or key == UIKeyEvent.KEY_Q:
-            self.window.set_close_flag()
-        if key == UIKeyEvent.KEY_S:
-            self.stats_printer.toggle_silence()
-
-    def process_events(self, evs):
-        self.stats_printer.print_stats_if_needed()
-        self.stats_printer.count("processed evs", len(evs))
-
-        if self.watchdog.is_processing_behind(evs) and self.params.should_drop_frames:
-            self.trigger_finder.drop_frame()
-
-        self.pos_filter.process_events(evs, self.pos_events_buf)
-
-        act_out_buf = self._pool.get_buf()
-        self.act_filter.process_events(self.pos_events_buf, act_out_buf)
-
-        self.trigger_finder.process_events(act_out_buf)
-
-        self.stats_printer.print_stats_if_needed()
+        self.frame_callback(depth_map)
 
     def reset(self):
-        self.watchdog.reset()
-        self.trigger_finder.reset()
+        self._watchdog.reset()
+        self._trigger_finder.reset()

@@ -92,8 +92,9 @@ class EventBufferList:
 class RobustTriggerFinder:
     projector_fps: int
     stats: StatsPrinter
-    callback: Callable[[np.ndarray], None]
     pool: "Pool"
+
+    callback: Callable[[np.ndarray], None] = lambda evs: None
 
     frame_paused_thresh_us = 40
     should_drop = False
@@ -187,3 +188,6 @@ class RobustTriggerFinder:
                     return -1
 
         return -1
+
+    def register_callback(self, callback):
+        self.callback = callback
