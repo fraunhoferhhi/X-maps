@@ -1,117 +1,150 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
-  <!-- Replace the content tag with appropriate information -->
-  <meta name="description" content="DESCRIPTION META TAG">
-  <meta property="og:title" content="SOCIAL MEDIA TITLE TAG"/>
-  <meta property="og:description" content="SOCIAL MEDIA DESCRIPTION TAG TAG"/>
-  <meta property="og:url" content="URL OF THE WEBSITE"/>
-  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
-  <meta property="og:image" content="static/image/your_banner_image.png" />
-  <meta property="og:image:width" content="1200"/>
-  <meta property="og:image:height" content="630"/>
+  <head>
+    <meta charset="utf-8" />
+    <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
+    <!-- Replace the content tag with appropriate information -->
+    <meta name="description" content="DESCRIPTION META TAG" />
+    <meta property="og:title" content="SOCIAL MEDIA TITLE TAG" />
+    <meta
+      property="og:description"
+      content="SOCIAL MEDIA DESCRIPTION TAG TAG"
+    />
+    <meta property="og:url" content="URL OF THE WEBSITE" />
+    <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
+    <meta property="og:image" content="static/image/your_banner_image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
+    <meta name="twitter:title" content="TWITTER BANNER TITLE META TAG" />
+    <meta
+      name="twitter:description"
+      content="TWITTER BANNER DESCRIPTION META TAG"
+    />
+    <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
+    <meta
+      name="twitter:image"
+      content="static/images/your_twitter_banner_image.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!-- Keywords for your paper to be indexed by-->
+    <meta name="keywords" content="KEYWORDS SHOULD BE PLACED HERE" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="twitter:title" content="TWITTER BANNER TITLE META TAG">
-  <meta name="twitter:description" content="TWITTER BANNER DESCRIPTION META TAG">
-  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
-  <meta name="twitter:image" content="static/images/your_twitter_banner_image.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <!-- Keywords for your paper to be indexed by-->
-  <meta name="keywords" content="KEYWORDS SHOULD BE PLACED HERE">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>X-maps Project Page</title>
+    <link rel="icon" type="image/x-icon" href="static/images/favicon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+      rel="stylesheet"
+    />
 
+    <link rel="stylesheet" href="static/css/bulma.min.css" />
+    <link rel="stylesheet" href="static/css/bulma-carousel.min.css" />
+    <link rel="stylesheet" href="static/css/bulma-slider.min.css" />
+    <link rel="stylesheet" href="static/css/fontawesome.all.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css"
+    />
+    <link rel="stylesheet" href="static/css/index.css" />
 
-  <title>X-maps Project Page</title>
-  <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
-  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
-  rel="stylesheet">
-
-  <link rel="stylesheet" href="static/css/bulma.min.css">
-  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
-  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
-  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
-  <link rel="stylesheet"
-  href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
-  <link rel="stylesheet" href="static/css/index.css">
-
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
-  <script defer src="static/js/fontawesome.all.min.js"></script>
-  <script src="static/js/bulma-carousel.min.js"></script>
-  <script src="static/js/bulma-slider.min.js"></script>
-  <script src="static/js/index.js"></script>
-</head>
-<body>
-
-
-  <section class="hero">
-    <div class="hero-body">
-      <div class="container is-max-desktop">
-        <div class="columns is-centered">
-          <div class="column has-text-centered">
-            <h1 class="title is-1 publication-title">X-maps: Direct Depth Lookup for Event-based Structured Light Systems</h1>
-            <div class="is-size-5 publication-authors">
-              <!-- Paper authors -->
-              <span class="author-block">
-                <a href="https://www.hhi.fraunhofer.de/en/departments/vit/research-groups/computer-vision-graphics/team/morgenstern.html" target="_blank">Wieland Morgenstern</a><sup><small>1</small></sup>,</span>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+    <script defer src="static/js/fontawesome.all.min.js"></script>
+    <script src="static/js/bulma-carousel.min.js"></script>
+    <script src="static/js/bulma-slider.min.js"></script>
+    <script src="static/js/index.js"></script>
+  </head>
+  <body>
+    <section class="hero">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <div class="columns is-centered">
+            <div class="column has-text-centered">
+              <h1 class="title is-1 publication-title">
+                X-maps: Direct Depth Lookup for Event-based Structured Light
+                Systems
+              </h1>
+              <div class="is-size-5 publication-authors">
+                <!-- Paper authors -->
                 <span class="author-block">
-                  <a href="https://iphome.hhi.de/gard/" target="_blank">Niklas Gard</a><sup><small>1,2</small></sup>,</span>
-                  <span class="author-block">
-                    Simon Baumann<sup><small>1</small></sup>,
+                  <a
+                    href="https://www.hhi.fraunhofer.de/en/departments/vit/research-groups/computer-vision-graphics/team/morgenstern.html"
+                    target="_blank"
+                    >Wieland Morgenstern</a
+                  ><sup><small>1</small></sup
+                  >,</span
+                >
+                <span class="author-block">
+                  <a href="https://iphome.hhi.de/gard/" target="_blank"
+                    >Niklas Gard</a
+                  ><sup><small>1,2</small></sup
+                  >,</span
+                >
+                <span class="author-block">
+                  Simon Baumann<sup><small>1</small></sup
+                  >,
+                </span>
+                <span class="author-block">
+                  <a
+                    href="https://iphome.hhi.de/hilsmann/index.htm"
+                    target="_blank"
+                    >Anna Hilsmann</a
+                  ><sup><small>1</small></sup
+                  >,
+                </span>
+                <span class="author-block">
+                  <a href="https://iphome.hhi.de/eisert/" target="_blank"
+                    >Peter Eisert</a
+                  ><sup><small>1,2</small></sup>
+                </span>
+              </div>
+
+              <div class="is-size-5 publication-authors">
+                <span class="author-block">
+                  <sup><small>1 </small></sup>Fraunhofer Heinrich Hertz
+                  Institute, HHI <br />
+                  <sup><small>2 </small></sup>Humboldt University of Berlin
+                  <br />
+                  <!-- Conferance name and year -->
+                </span>
+              </div>
+
+              <div class="column has-text-centered">
+                <!-- LateXML rendering GitHub page -->
+
+                <div class="publication-links">
+                  <span class="link-block">
+                    <a
+                      href="https://fraunhoferhhi.github.io/X-maps/paper-html/x-maps-direct-depth-lookup-for-event-based-structured-light-systems.html"
+                      target="_blank"
+                      class="external-link button is-normal is-rounded is-dark"
+                    >
+                      <span class="icon">
+                        <i class="fas fa-file-contract"></i>
+                      </span>
+                      <span>Paper (HTML)</span>
+                    </a>
                   </span>
-                  <span class="author-block">
-                    <a href="https://iphome.hhi.de/hilsmann/index.htm" target="_blank">Anna Hilsmann</a><sup><small>1</small></sup>,
+
+                  <!-- PDF link Workshop upload -->
+
+                  <span class="link-block">
+                    <a
+                      href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems.pdf"
+                      target="_blank"
+                      class="external-link button is-normal is-rounded is-dark"
+                    >
+                      <span class="icon">
+                        <i class="fas fa-file-pdf"></i>
+                      </span>
+                      <span>Paper (PDF)</span>
+                    </a>
                   </span>
-                  <span class="author-block">
-                    <a href="https://iphome.hhi.de/eisert/" target="_blank">Peter Eisert</a><sup><small>1,2</small></sup>
-                  </span>
-                  </div>
 
-                  <div class="is-size-5 publication-authors">
-                    <span class="author-block">
-                      <sup><small>1 </small></sup>Fraunhofer Heinrich Hertz Institute, HHI <br>
-                      <sup><small>2 </small></sup>Humboldt University of Berlin <br>
-                      <!-- Conferance name and year -->
-                  </span>
-                  </div>
+                  <!-- Arxiv PDF link -->
 
-
-                  <div class="column has-text-centered">
-
-                    <!-- LateXML rendering GitHub page -->
-
-                    <div class="publication-links">
-
-                       <span class="link-block">
-                        <a href="https://fraunhoferhhi.github.io/X-maps/paper-html/x-maps-direct-depth-lookup-for-event-based-structured-light-systems.html" target="_blank"
-                        class="external-link button is-normal is-rounded is-dark">
-                          <span class="icon">
-                            <i class="fas fa-file-contract"></i>
-                          </span>
-                          <span>Paper (HTML)</span>
-                      </a>
-                    </span>
-
-
-                    <!-- PDF link Workshop upload -->
-
-                       <span class="link-block">
-                        <a href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems.pdf" target="_blank"
-                        class="external-link button is-normal is-rounded is-dark">
-                        <span class="icon">
-                          <i class="fas fa-file-pdf"></i>
-                        </span>
-                        <span>Paper (PDF)</span>
-                      </a>
-                    </span>
-
-
-                         <!-- Arxiv PDF link -->
-
-<!--
+                  <!--
                        <span class="link-block">
                         <a href="https://arxiv.org/pdf/<ARXIV PAPER ID>.pdf" target="_blank"
                         class="external-link button is-normal is-rounded is-dark">
@@ -123,8 +156,8 @@
                     </span>
  -->
 
-                    <!-- Supplementary PDF link -->
-<!--                     
+                  <!-- Supplementary PDF link -->
+                  <!--                     
                     <span class="link-block">
                       <a href="static/pdfs/supplementary_material.pdf" target="_blank"
                       class="external-link button is-normal is-rounded is-dark">
@@ -138,17 +171,20 @@
 
                   <!-- Github link -->
                   <span class="link-block">
-                    <a href="https://github.com/fraunhoferhhi/X-maps" target="_blank"
-                    class="external-link button is-normal is-rounded is-dark">
-                    <span class="icon">
-                      <i class="fab fa-github"></i>
-                    </span>
-                    <span>Code (coming soon)</span>
-                  </a>
-                </span>
+                    <a
+                      href="https://github.com/fraunhoferhhi/X-maps"
+                      target="_blank"
+                      class="external-link button is-normal is-rounded is-dark"
+                    >
+                      <span class="icon">
+                        <i class="fab fa-github"></i>
+                      </span>
+                      <span>Code (coming soon)</span>
+                    </a>
+                  </span>
 
-                <!-- ArXiv abstract Link -->
-<!-- 
+                  <!-- ArXiv abstract Link -->
+                  <!-- 
                 <span class="link-block">
                   <a href="https://arxiv.org/abs/<ARXIV PAPER ID>" target="_blank"
                   class="external-link button is-normal is-rounded is-dark">
@@ -159,28 +195,33 @@
                 </a>
               </span>
 
- -->              
+ -->
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-
-<section class="section is-light">
-  <div class="container is-max-desktop">
-    <div class="columns is-centered has-text-centered">
-        <div class="content has-text-justified">
-        The paper has been accepted at the <a href="https://tub-rip.github.io/eventvision2023/" target="_blank" class="external-link">CVPR 2023 Workshop on Event-based Vision</a>!
+    <section class="section is-light">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="content has-text-justified">
+            The paper has been accepted at the
+            <a
+              href="https://tub-rip.github.io/eventvision2023/"
+              target="_blank"
+              class="external-link"
+              >CVPR 2023 Workshop on Event-based Vision</a
+            >!
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- Teaser video-->
-<!-- 
+    <!-- Teaser video-->
+    <!-- 
 <section class="hero teaser">
   <div class="container is-max-desktop">
     <div class="hero-body">
@@ -195,30 +236,49 @@
   </div>
 </section>
 -->
-<!-- End teaser video -->
+    <!-- End teaser video -->
 
-<!-- Paper abstract -->
-<section class="section hero is-light">
-  <div class="container is-max-desktop">
-    <div class="columns is-centered has-text-centered">
-      <div class="column is-four-fifths">
-        <h2 class="title is-3">Abstract</h2>
-        <div class="content has-text-justified">
-          <p>
-            We present a new approach to direct depth estimation for Spatial Augmented Reality (SAR) applications using event cameras. These dynamic vision sensors are a great fit to be paired with laser projectors for depth estimation in a structured light approach. Our key contributions involve a conversion of the projector time map into a rectified X-map, capturing x-axis correspondences for incoming events and enabling direct disparity lookup without any additional search. Compared to previous implementations, this significantly simplifies depth estimation, making it more efficient, while the accuracy is similar to the time map-based process. Moreover, we compensate non-linear temporal behavior of cheap laser projectors by a simple time map calibration, resulting in improved performance and increased depth estimation accuracy. Since depth estimation is executed by two lookups only, it can be executed almost instantly (less than 3 ms per frame with a Python implementation) for incoming events. This allows for real-time interactivity and responsiveness, which makes our approach especially suitable for SAR experiences where low latency, high frame rates and direct feedback are crucial. We present valuable insights gained into data transformed into X-maps and evaluate our depth from disparity estimation against the state of the art time map-based results.
-          </p>
-
-         </div>
+    <!-- Paper abstract -->
+    <section class="section hero is-light">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h2 class="title is-3">Abstract</h2>
+            <div class="content has-text-justified">
+              <p>
+                We present a new approach to direct depth estimation for Spatial
+                Augmented Reality (SAR) applications using event cameras. These
+                dynamic vision sensors are a great fit to be paired with laser
+                projectors for depth estimation in a structured light approach.
+                Our key contributions involve a conversion of the projector time
+                map into a rectified X-map, capturing x-axis correspondences for
+                incoming events and enabling direct disparity lookup without any
+                additional search. Compared to previous implementations, this
+                significantly simplifies depth estimation, making it more
+                efficient, while the accuracy is similar to the time map-based
+                process. Moreover, we compensate non-linear temporal behavior of
+                cheap laser projectors by a simple time map calibration,
+                resulting in improved performance and increased depth estimation
+                accuracy. Since depth estimation is executed by two lookups
+                only, it can be executed almost instantly (less than 3 ms per
+                frame with a Python implementation) for incoming events. This
+                allows for real-time interactivity and responsiveness, which
+                makes our approach especially suitable for SAR experiences where
+                low latency, high frame rates and direct feedback are crucial.
+                We present valuable insights gained into data transformed into
+                X-maps and evaluate our depth from disparity estimation against
+                the state of the art time map-based results.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</section>
-<!-- End paper abstract -->
+    </section>
+    <!-- End paper abstract -->
 
+    <!-- Image carousel -->
 
-<!-- Image carousel -->
-
-<!-- <section class="hero is-small">
+    <!-- <section class="hero is-small">
   <div class="hero-body">
     <div class="container">
       <div id="results-carousel" class="carousel results-carousel">
@@ -250,13 +310,10 @@
 </div>
 </div>
 </section> -->
-<!-- End image carousel -->
+    <!-- End image carousel -->
 
-
-
-
-<!-- Youtube video -->
-<!-- <section class="hero is-small is-light">
+    <!-- Youtube video -->
+    <!-- <section class="hero is-small is-light">
   <div class="hero-body">
     <div class="container">
       <h2 class="title is-3">Video Presentation</h2>
@@ -271,11 +328,10 @@
     </div>
   </div>
 </section> -->
-<!-- End youtube video -->
+    <!-- End youtube video -->
 
-
-<!-- Video carousel -->
-<!-- <section class="hero is-small">
+    <!-- Video carousel -->
+    <!-- <section class="hero is-small">
   <div class="hero-body">
     <div class="container">
       <h2 class="title is-3">Another Carousel</h2>
@@ -304,13 +360,8 @@
 </section>
  --><!-- End video carousel -->
 
-
-
-
-
-
-<!-- Paper poster -->
-<!-- <section class="hero is-small is-light">
+    <!-- Paper poster -->
+    <!-- <section class="hero is-small is-light">
   <div class="hero-body">
     <div class="container">
       <h2 class="title">Poster</h2>
@@ -323,12 +374,11 @@
   </section>
  --><!--End paper poster -->
 
-
-<!--BibTex citation -->
-   <section class="section" id="BibTeX">
-    <div class="container is-max-desktop content">
-      <h2 class="title">BibTeX</h2>
-      <pre><code>@inproceedings{Morgenstern2023CVPR,
+    <!--BibTex citation -->
+    <section class="section" id="BibTeX">
+      <div class="container is-max-desktop content">
+        <h2 class="title">BibTeX</h2>
+        <pre><code>@inproceedings{Morgenstern2023CVPR,
   title      = {X-maps: Direct Depth Lookup for Event-based Structured Light Systems},
   author     = {Morgenstern, Wieland and Gard, Niklas and Baumann, Simon and Hilsmann, Anna and Eisert, Peter},
   year       = 2023,
@@ -336,34 +386,41 @@
   booktitle  = {{IEEE} Conf. Comput. Vis. Pattern Recog. Workshops (CVPRW)}
 }
 </code></pre>
-    </div>
-</section>
-<!--End BibTex citation -->
+      </div>
+    </section>
+    <!--End BibTex citation -->
 
-
-  <footer class="footer">
-  <div class="container">
-    <div class="columns is-centered">
-      <div class="column is-8">
-        <div class="content">
-
-          <p>
-            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a>.
-            <br> This website is licensed under a <a rel="license"  href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
-            Commons Attribution-ShareAlike 4.0 International License</a>.
-          </p>
-
+    <footer class="footer">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-8">
+            <div class="content">
+              <p>
+                This page was built using the
+                <a
+                  href="https://github.com/eliahuhorwitz/Academic-project-page-template"
+                  target="_blank"
+                  >Academic Project Page Template</a
+                >. <br />
+                This website is licensed under a
+                <a
+                  rel="license"
+                  href="http://creativecommons.org/licenses/by-sa/4.0/"
+                  target="_blank"
+                  >Creative Commons Attribution-ShareAlike 4.0 International
+                  License</a
+                >.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</footer>
+    </footer>
 
-<!-- Statcounter tracking code -->
-  
-<!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
+    <!-- Statcounter tracking code -->
+
+    <!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
 
     <!-- End of Statcounter Code -->
-
   </body>
-  </html>
+</html>
