@@ -1,6 +1,6 @@
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
-<a name="readme-top"></a>
 
+<a name="readme-top"></a>
 
 <!-- PROJECT LOGO -->
 <br />
@@ -20,6 +20,9 @@
     <a href="https://fraunhoferhhi.github.io/X-maps/paper-html/x-maps-direct-depth-lookup-for-event-based-structured-light-systems.html" target="_blank"><strong>Paper (HTML)</strong></a>
     ·
     <a href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems.pdf" target="_blank"><strong>Paper (PDF)</strong></a>
+        ·
+    <a href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems_poster.pdf" target="_blank"><strong>Poster</strong></a>
+    
   </p>
 
 </div>
@@ -27,7 +30,6 @@
 This project enables you to utilize event cameras to carry out live depth estimations from images projected with a laser projector. We've streamlined the depth estimation process by creating a lookup image with one spatial and one temporal axis (`y` and `t`), forming an X-map. This idea enables speedy depth calculations (taking less than 3 ms per frame), but also maintains the accuracy of depth estimation through disparity search in time maps. The end result is an efficient, reactive tool for designing real-time Spatial Augmented Reality experiences.
 
 The entry point for the live depth estimation is `python/depth_reprojection.py`. The script is using the Metavision SDK to facilitate event data capture from Prophesee cameras. For a straightforward environment setup, an `Ubuntu 20.04` Dockerfile is provided. The depth estimation is implemented in Python with NumPy and Numba.
-
 
 <!-- ABOUT THE PROJECT -->
 <!-- ## About The Project
@@ -48,8 +50,6 @@ Use the `BLANK_README.md` to get started.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
  -->
 
-
-
 ## Getting Started
 
 The project is configured to run from a Docker image in Visual Studio Code (VS Code). It was tested on an Ubuntu 22.04 host.
@@ -61,10 +61,10 @@ The project is configured to run from a Docker image in Visual Studio Code (VS C
    git clone git@github.com:fraunhoferhhi/X-maps.git
    ```
 2. Open X-maps folder in VS Code
-3. Install the extensions recommended by VS Code (*Docker* and *Dev Containers*)
+3. Install the extensions recommended by VS Code (_Docker_ and _Dev Containers_)
 4. Copy `.devcontainer/metavision.list.template` to `.devcontainer/metavision.list`
 5. Edit `.devcontainer/metavision.list` to fill in the URL to the Ubuntu 20.04 Metavision SDK
-6. *Reopen in Container* in VS Code
+6. _Reopen in Container_ in VS Code
 
 <!-- <p align="right">(<a href="#readme-top">back to top</a>)</p> -->
 
@@ -74,42 +74,41 @@ To use data from the [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/
 
 1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`.
 2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data` in the container.
-3. *Rebuild container* to reopen the project with the mounted folder.
-4. Terminal &rarr; Run Task... &rarr; *Download ESL (static) raw and bias files*.
+3. _Rebuild container_ to reopen the project with the mounted folder.
+4. Terminal &rarr; Run Task... &rarr; _Download ESL (static) raw and bias files_.
 
 ### ESL static depth reprojection
 
-Run the target *X-maps ESL static seq1*. A window should open that performs a live depth estimation of the `book_duck` sequence, projected into the projector's view.
+Run the target _X-maps ESL static seq1_. A window should open that performs a live depth estimation of the `book_duck` sequence, projected into the projector's view.
 
 ### Live depth reprojection (Spatial Augmented Reality example)
 
 1. Ensure that the camera is working correctly by running `metavision_player` in a Terminal in VS Code.
 2. Calibrate your camera-projector setup, and write the parameters into a YAML file, storing the OpenCV matrices. Examples can be found in `data/`.
 3. Choose camera biases in a way to produce mostly postive events (negative are ignored in processing) and produce few events outside the projected area.
-4. Edit the command line arguments for target *X-maps live depth reprojection* in `.vscode/launch.json`.
+4. Edit the command line arguments for target _X-maps live depth reprojection_ in `.vscode/launch.json`.
 5. Display bright content on the projector to allow the start and end of the frame to be identified (trigger finding).
-6. Running *X-maps live depth reprojection* creates a window that shows the scene depth from the projector's view.
+6. Running _X-maps live depth reprojection_ creates a window that shows the scene depth from the projector's view.
 7. Move the depth reprojection window to the projector to overlay the scene with the measured depth.
 
 To display the depth in full screen on the projector, use the OS window manager to maximize the window. On Ubuntu, a keyboard shortcut can be set under Settings &rarr; Keyboard &rarr; View and Customize Shortcuts &rarr; Windows &rarr; Toggle fullscreen mode.
 
 The parameters you can use when running the `depth_reprojection.py` script can be listed by running `python3 python/depth_reprojection.py --help` in a Terminal in the Docker image in VS Code.
 
-| Parameter  | Explanation |
-| ------------- | ------------- |
-| `--projector-width`  | Defines the width of the projector in pixels. The default value is `720`.  |
-| `--projector-height`  | Defines the height of the projector in pixels. The default value is `1280`.  |
-| `--projector-fps`  | Defines the frames per second (fps) of the projector. The default value is `60`.  |
-| `--projector-time-map`  | Specifies the path to the calibrated projector time map file (*.npy). If this is left empty, a linear time map will be used. |
-| `--z-near`  | Sets the minimum depth in meters (m) for visualization. The default value is `0.1`. |
-| `--z-far`  | Sets the maximum depth in meters (m) for visualization. The default value is `1.0`. |
-| `--calib`  | Specifies the path to a yaml file with camera and projector intrinsic and extrinsic calibration. This parameter is required. |
-| `--bias`  | Specifies the path to the bias file. This is only required for live camera usage. |
-| `--input`  | Specifies the path to either a .raw, .dat file for prerecorded sessions. Leave this parameter out for live capture. |
-| `--no-frame-dropping` | By default, events are dropped when the processing is too slow. Use this parameter to disable frame dropping, and process all incoming events. |
-| `--loop-input` | After events from RAW input file are exhausted, start playing from beginning again, forever. |
-| `--camera-perspective` | By default the depth is rendered from the projector's perspectiev. Enable this flag to render from the camera perspective instead. |
-
+| Parameter              | Explanation                                                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--projector-width`    | Defines the width of the projector in pixels. The default value is `720`.                                                                      |
+| `--projector-height`   | Defines the height of the projector in pixels. The default value is `1280`.                                                                    |
+| `--projector-fps`      | Defines the frames per second (fps) of the projector. The default value is `60`.                                                               |
+| `--projector-time-map` | Specifies the path to the calibrated projector time map file (\*.npy). If this is left empty, a linear time map will be used.                  |
+| `--z-near`             | Sets the minimum depth in meters (m) for visualization. The default value is `0.1`.                                                            |
+| `--z-far`              | Sets the maximum depth in meters (m) for visualization. The default value is `1.0`.                                                            |
+| `--calib`              | Specifies the path to a yaml file with camera and projector intrinsic and extrinsic calibration. This parameter is required.                   |
+| `--bias`               | Specifies the path to the bias file. This is only required for live camera usage.                                                              |
+| `--input`              | Specifies the path to either a .raw, .dat file for prerecorded sessions. Leave this parameter out for live capture.                            |
+| `--no-frame-dropping`  | By default, events are dropped when the processing is too slow. Use this parameter to disable frame dropping, and process all incoming events. |
+| `--loop-input`         | After events from RAW input file are exhausted, start playing from beginning again, forever.                                                   |
+| `--camera-perspective` | By default the depth is rendered from the projector's perspectiev. Enable this flag to render from the camera perspective instead.             |
 
 ### Compute evaluation on static ESL data
 
@@ -117,9 +116,8 @@ As there is no dataset providing ground truth depth, we chose to check the corre
 
 1. Create a local folder on the host machine to store the data, e.g. `/data/2022_ESL_Event_based_Structured_Light`.
 2. Add a `"mounts"` entry in `devcontainer.json`, that mounts the local folder to `/ESL_data` in the container.
-3. *Rebuild container* to reopen the project with the mounted folder.
-4. Terminal &rarr; Run Task... &rarr; *Run X-maps evaluation script*.
-
+3. _Rebuild container_ to reopen the project with the mounted folder.
+4. Terminal &rarr; Run Task... &rarr; _Run X-maps evaluation script_.
 
 ## Technical details
 
@@ -129,12 +127,12 @@ Calibration of the camera-projector system needs to be provided by the user. The
 
 ### Differences to ESL
 
-| What | X-Maps | ESL |
-| ------------- | ------------- | ------------- |
-| Projector scan direction | y (fast): bottom to top, x (slow): left to right | y (fast): bottom to top, x (slow): left to right |
-| Projector distortion | Ignored | Used for stereo rectification, ignored in projector remapping |
-| Time map rectification border handling | cv2.BORDER_REPLICATE | cv2.BORDER_CONSTANT |
-| Rectified size | 2.75 * camera size | 3 * projector size |
+| What                                   | X-Maps                                           | ESL                                                           |
+| -------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
+| Projector scan direction               | y (fast): bottom to top, x (slow): left to right | y (fast): bottom to top, x (slow): left to right              |
+| Projector distortion                   | Ignored                                          | Used for stereo rectification, ignored in projector remapping |
+| Time map rectification border handling | cv2.BORDER_REPLICATE                             | cv2.BORDER_CONSTANT                                           |
+| Rectified size                         | 2.75 \* camera size                              | 3 \* projector size                                           |
 
 The X-Maps column lists the default for the depth reprojection script. The ESL column lists the default for the ESL implementation. For comparison against esl_init in the evaluation, the ESL assumptions are used when processing with X-Maps.
 
@@ -180,7 +178,6 @@ The disparity map is converted to a depth map using the camera-projector calibra
 
 Distributed under the GPL-3.0 license. See `LICENSE` for more information.
 
-
 <!-- CONTACT -->
 <!-- ## Contact
 
@@ -194,4 +191,4 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 
 ## Acknowledgments
 
-* [ESL: Event-based Structured Light](https://github.com/uzh-rpg/ESL)
+- [ESL: Event-based Structured Light](https://github.com/uzh-rpg/ESL)
