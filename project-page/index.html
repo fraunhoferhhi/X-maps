@@ -221,21 +221,36 @@
     </section>
 
     <!-- Teaser video-->
-    <!-- 
-<section class="hero teaser">
-  <div class="container is-max-desktop">
-    <div class="hero-body">
-      <video poster="" id="tree" autoplay controls muted loop height="100%">
-        <source src="static/videos/banner_video.mp4"
-        type="video/mp4">
-      </video>
-      <h2 class="subtitle has-text-centered">
-        Aliquam vitae elit ullamcorper tellus egestas pellentesque. Ut lacus tellus, maximus vel lectus at, placerat pretium mi. Maecenas dignissim tincidunt vestibulum. Sed consequat hendrerit nisl ut maximus. 
-      </h2>
-    </div>
-  </div>
-</section>
--->
+    <section class="hero teaser">
+      <div class="container is-max-desktop">
+        <div class="hero-body">
+          <video poster="" id="tree" autoplay controls muted loop height="100%">
+            <source
+              src="static/videos/x_maps_hand_demo_h264.mp4"
+              type="video/mp4"
+            />
+            <source
+              src="static/videos/x_maps_hand_demo_vp9.webm"
+              type="video/webm"
+            />
+          </video>
+          <h2 class="subtitle has-text-centered">
+            Live-demonstration of the depth estimation
+          </h2>
+          <p>
+            This method presents a way to estimate depth with a stereo system of
+            a small laser projector and an event camera. From the timestamps of
+            incoming events, we can determine the current scanline of the
+            projector, which we use to compute the disparity to the recorded
+            event in the camera. Due to the application of the spatio-temporal
+            X-maps, we can achieve real-time performance on a laptop CPU. As the
+            depth estimation is done from the time stamps, the projected content
+            can be freely chosen, as long as it is bright enough over the
+            environment to produce events.
+          </p>
+        </div>
+      </div>
+    </section>
     <!-- End teaser video -->
 
     <!-- Paper abstract -->
