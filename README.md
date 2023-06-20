@@ -188,6 +188,20 @@ Here are a few things to try if the processing speed lags behind the projector:
   }
 ```
 
+## Citation
+
+If you find this work useful, a citation will be appreciated:
+
+```bibtex
+@inproceedings{Morgenstern2023CVPR,
+  title      = {X-maps: Direct Depth Lookup for Event-based Structured Light Systems},
+  author     = {Morgenstern, Wieland and Gard, Niklas and Baumann, Simon and Hilsmann, Anna and Eisert, Peter},
+  year       = 2023,
+  month      = {June},
+  booktitle  = {{IEEE} Conf. Comput. Vis. Pattern Recog. Workshops (CVPRW)}
+}
+```
+
 ## License
 
 Distributed under the GPL-3.0 license. See `LICENSE` for more information.
