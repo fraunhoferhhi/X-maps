@@ -176,10 +176,10 @@ The disparity map is converted to a depth map using the camera-projector calibra
 
 ## Performance considerations
 
-Here's a few things to try should processing speed lag behind the projector:
+Here are a few things to try if the processing speed lags behind the projector:
 
 - The default projector perspective contains more processing steps than the camera perspective, which can just use the event pixel coordinates. Use `--camera-perspective` to speed up processing.
-- The event package length `delta_t` is set to produce four packages per processor frame. Reduce `EV_PACKETS_PER_FRAME` to one (or even lower) to run the main loop fewer times per frame.
+- The event package length `delta_t` is set to produce four packages per processor frame. Reduce [`EV_PACKETS_PER_FRAME`](https://github.com/fraunhoferhhi/X-maps/blob/e5c948ca3ffbf005571c2b04d374e40aec52ed3a/python/depth_reprojection.py#L66) to one (or even lower) to run the main loop fewer times per frame.
 - The individual processing steps are running parallelized numba kernels. On some machines (e.g. laptops), you may seem improved performance by reducing the number of threads. You can achieve that by adding the following lines to the configuration in the [launch.json](.vscode/launch.json), in this example capping the parallel processing to 4 threads:
 
 ```JSON
