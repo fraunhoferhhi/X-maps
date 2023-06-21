@@ -78,6 +78,7 @@ To use data from the [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/
 ### ESL static depth reprojection
 
 ![A color coded camera perspective preview of the duck buck sequence from the ESL dataset, processed with X-maps](project-page/static/images/seq1_cam_view.png "ESL seq1 live estimation")
+
 _ESL book duck sequence depth estimation, from the camera perspective_
 
 <br />
