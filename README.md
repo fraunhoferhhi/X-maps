@@ -82,6 +82,7 @@ To use data from the [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/
 _ESL book duck sequence depth estimation, from the camera perspective_
 
 <br />
+
 Run the target _X-maps ESL static seq1_. A window should open that performs a live depth estimation of the `book_duck` sequence, rendered by default from the projector's perspective.
 
 ### Live depth reprojection (Spatial Augmented Reality example)
