@@ -78,8 +78,10 @@ To use data from the [ESL: Event-based Structured Light](https://rpg.ifi.uzh.ch/
 ### ESL static depth reprojection
 
 ![A color coded camera perspective preview of the duck buck sequence from the ESL dataset, processed with X-maps](project-page/static/images/seq1_cam_view.png "ESL seq1 live estimation")
+_ESL book duck sequence depth estimation, from the camera perspective_
 
-Run the target _X-maps ESL static seq1_. A window should open that performs a live depth estimation of the `book_duck` sequence, projected into the projector's view.
+<br />
+Run the target _X-maps ESL static seq1_. A window should open that performs a live depth estimation of the `book_duck` sequence, rendered by default from the projector's perspective.
 
 ### Live depth reprojection (Spatial Augmented Reality example)
 
