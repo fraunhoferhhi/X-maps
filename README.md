@@ -205,16 +205,14 @@ If you find this work useful, a citation will be appreciated:
 Distributed under the GPL-3.0 license. See `LICENSE` for more information.
 
 <!-- CONTACT -->
-<!-- ## Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
+## Contact
 
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
- -->
+Wieland Morgenstern: [LinkedIn](https://www.linkedin.com/in/wiemo/) · [Fraunhofer HHI homepage](https://www.hhi.fraunhofer.de/en/departments/vit/research-groups/computer-vision-graphics/team/morgenstern.html)
 
 ## Acknowledgments
 
 - [ESL: Event-based Structured Light](https://github.com/uzh-rpg/ESL)
+- [Metavision SDK](https://docs.prophesee.ai/stable/metavision_sdk/)
+- [Event-based Vision Resources](https://github.com/uzh-rpg/event-based_vision_resources)
+- [CVPR 2023 Workshop on Event-based Vision](https://tub-rip.github.io/eventvision2023/)
