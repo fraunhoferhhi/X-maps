@@ -5,11 +5,8 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-<!--   <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
- -->
-  <h3 align="center">X-maps: Direct Depth Lookup for Event-based Structured Light Systems</h3>
+   <h3 align="center">X-maps: Direct Depth Lookup for Event-based Structured Light Systems</h3>
+   <img src="project-page/static/images/teaser_x_maps_depth.jpeg" alt="Teaser X-maps: plot of an event cube with disparity and a depth reprojection example" width="1200" height="675">
 
   <p align="center">
     <!-- <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a> -->
