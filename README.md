@@ -133,7 +133,7 @@ Calibration of the camera-projector system needs to be provided by the user. The
 
 | What                                   | X-Maps                                           | ESL                                                           |
 | -------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
-| Projector scan direction               | y (fast): bottom to top, x (slow): left to right | y (fast): bottom to top, x (slow): left to right              |
+| Projector scan direction               | y (fast): bottom to top, x (slow): left to right | y (fast): top to bottom, x (slow): left to right              |
 | Projector distortion                   | Ignored                                          | Used for stereo rectification, ignored in projector remapping |
 | Time map rectification border handling | cv2.BORDER_REPLICATE                             | cv2.BORDER_CONSTANT                                           |
 | Rectified size                         | 2.75 \* camera size                              | 3 \* projector size                                           |
