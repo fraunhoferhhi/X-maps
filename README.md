@@ -196,7 +196,7 @@ Here are a few things to try if the processing speed lags behind the projector:
 
 ## Further reading
 
-For comprehensive background and detailed methodologies showing our camera/projector setup, discussing our calibation method in detail, and providing additional experiments, refer to the master thesis of our co-author Simon Baumann: [3D reconstruction with structured light using event-based vision and a video laser projector](project-page/static/pdfs/EB3D_Baumann_Master_Thesis.pdf). In this work, the same experimental setup is used as in the paper. It differs in the disparity calculation, where it provides a CUDA implementation of the ESL-init algorithm. The CUDA implementation from the thesis is compared against in the X-Maps paper, in Table 2, as "ESL-init (CUDA)".
+For comprehensive background and detailed methodologies showing our camera/projector setup, discussing our calibation method in detail, and providing additional experiments, refer to the master thesis of our co-author Simon Baumann: [3D reconstruction with structured light using event-based vision and a video laser projector](https://fraunhoferhhi.github.io/X-maps/static/pdfs/EB3D_Baumann_Master_Thesis.pdf). In this work, the same experimental setup is used as in the paper. It differs in the disparity calculation, where it provides a CUDA implementation of the ESL-init algorithm. The CUDA implementation from the thesis is compared against in the X-Maps paper, in Table 2, as "ESL-init (CUDA)".
 
 
 ## Citation
