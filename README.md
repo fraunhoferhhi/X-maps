@@ -204,12 +204,16 @@ For comprehensive background and detailed methodologies showing our camera/proje
 If you find this work useful, a citation will be appreciated:
 
 ```bibtex
-@inproceedings{Morgenstern2023CVPR,
-  title      = {X-maps: Direct Depth Lookup for Event-based Structured Light Systems},
-  author     = {Morgenstern, Wieland and Gard, Niklas and Baumann, Simon and Hilsmann, Anna and Eisert, Peter},
-  year       = 2023,
-  month      = {June},
-  booktitle  = {{IEEE} Conf. Comput. Vis. Pattern Recog. Workshops (CVPRW)}
+@inproceedings{morgenstern2023cvpr,
+  title        = {X-maps: Direct Depth Lookup for Event-based Structured Light Systems},
+  author       = {Morgenstern, Wieland and Gard, Niklas and Baumann, Simon and Hilsmann, Anna and Eisert, Peter},
+  year         = 2023,
+  booktitle    = {2023 IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops (CVPRW)},
+  volume       = {},
+  number       = {},
+  pages        = {4007--4015},
+  doi          = {10.1109/CVPRW59228.2023.00418},
+  keywords     = {Computer vision;Codes;Conferences;Lasers;Spatial augmented reality;Estimation;Vision sensors}
 }
 ```
 
