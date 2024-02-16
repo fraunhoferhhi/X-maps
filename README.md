@@ -17,7 +17,9 @@
     ·
     <a href="https://fraunhoferhhi.github.io/X-maps/paper-html/x-maps-direct-depth-lookup-for-event-based-structured-light-systems.html" target="_blank"><strong>Paper (HTML)</strong></a>
     ·
-    <a href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems.pdf" target="_blank"><strong>Paper (PDF)</strong></a>
+    <a href="https://openaccess.thecvf.com/content/CVPR2023W/EventVision/papers/Morgenstern_X-Maps_Direct_Depth_Lookup_for_Event-Based_Structured_Light_Systems_CVPRW_2023_paper.pdf" target="_blank"><strong>Paper (PDF)</strong></a>
+        ·
+    <a href="http://arxiv.org/abs/2402.10061" target="_blank"><strong>arXiv</strong></a>
         ·
     <a href="https://tub-rip.github.io/eventvision2023/papers/2023CVPRW_X-Maps_Direct_Depth_Lookup_for_Event-based_Structured_Light_Systems_poster.pdf" target="_blank"><strong>Poster</strong></a>
     
