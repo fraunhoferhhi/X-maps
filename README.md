@@ -91,7 +91,7 @@ Run the target _X-maps ESL static seq1_. A window should open that performs a li
 
 1. Ensure that the camera is working correctly by running `metavision_player` in a Terminal in VS Code.
 2. Calibrate your camera-projector setup, and write the parameters into a YAML file, storing the OpenCV matrices. Examples can be found in `data/`.
-3. Choose camera biases in a way to produce mostly postive events (negative are ignored in processing) and produce few events outside the projected area.
+3. Choose camera biases in a way to produce mostly positive events (negative are ignored in processing) and produce few events outside the projected area.
 4. Edit the command line arguments for target _X-maps live depth reprojection_ in `.vscode/launch.json`.
 5. Display bright content on the projector to allow the start and end of the frame to be identified (trigger finding).
 6. Running _X-maps live depth reprojection_ creates a window that shows the scene depth from the projector's view.
